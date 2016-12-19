@@ -81,12 +81,14 @@ runCodeFit(){
 }
 
 runProc(){
-	cd /home/disk/eos4/rachel/git/Python/EventTracking/
+	cd /home/disk/eos4/rachel/git/Python/eventTracking/analysis/
 	echo python process_full_output_arg.py --Data ${dataV} --Version ${versionV}
 	python process_full_output_arg.py --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV}
 }
 
 runExt() {
+    cd /home/disk/eos4/rachel/git/Python/eventTracking/analysis/
+
     echo python extract_time_speed_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
     python extract_time_speed_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs} || return 1
     
@@ -96,6 +98,8 @@ runExt() {
 }
 
 runAna() {
+    cd /home/disk/eos4/rachel/git/Python/eventTracking/analysis/
+
 	echo python map_time_speed_monthly_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
 	python map_time_speed_monthly_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs} || return 1
 
@@ -111,6 +115,8 @@ runAna() {
 }
 
 runRegrid(){
+    cd /home/disk/eos4/rachel/git/Python/eventTracking/analysis/
+
 	echo python regrid_time_speed_ann_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --sumlons $numlatsV --sumlats $numlatsV --minGB ${minGBs}
 	python regrid_time_speed_ann_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --sumlons $numlatsV --sumlats $numlatsV --minGB ${minGBs}	
 
@@ -120,6 +126,8 @@ runRegrid(){
 
 
 runFig(){
+    cd /home/disk/eos4/rachel/git/Python/eventTracking/analysis/
+
 	echo python paperplot_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 --tbound2 1 2 5 100 --unit day --Data ${dataV} --Version ${versionV} --anstartyr ${startyrV} --anendyr ${endyrV} --sumlons $numlatsV --sumlats $numlatsV --minGB ${minGBs}
 	python paperplot_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 --tbound2 1 2 5 100 --unit day --Data ${dataV} --Version ${versionV} --anstartyr ${startyrV} --anendyr ${endyrV} --sumlons $numlatsV --sumlats $numlatsV --minGB ${minGBs}
 

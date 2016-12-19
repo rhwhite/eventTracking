@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Aug 12 17:45:25 2015
-
+Code to plot figures of precipitation events density and total rainfall using command line arguments
 @author: rachel
 """
 
@@ -133,7 +133,7 @@ elif Data == "ERA20C":
 
 
 elif Data == "CESM":
-    Fstartyr = 1980
+    Fstartyr = 1990
     Fendyr = 2010
     DirIn = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/CESM_output/' + Version + str(Fstartyr) + '/proc/'
     

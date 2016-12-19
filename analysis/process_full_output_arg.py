@@ -277,13 +277,12 @@ while eventnum < nevents:
 							skips += nlines
 							print "skips now ",skips
 							eventnum += 1   # to get out of outer loop!
-							
 							geteventdata(index)
 
 							break	# break out of loop
 						else:
 							print "eventnum last in chunk ", eventnum
-	                                                skips += nlines-eventcount      # Skip back to beginning of this event
+	                        skips += nlines-eventcount      # Skip back to beginning of this event
 				else:
 					if (preeventnum >= 0): #then it's not the very first event
 						geteventdata(index)
@@ -317,11 +316,11 @@ while eventnum < nevents:
                                                         skips +=nlines-1 # go back to start of this event.
 
 		except MemoryError:
-			print "Memory error, trying to chunk"            
+			print "Memory error, trying to chunk"
 			maxlines = int(maxlines/2)
 			print "new maxlines: ", maxlines
 			try:
-				del(textdata1,textdata2,eventnums,eventtimes,xs,ys,cxy) 
+				del(textdata1,textdata2,eventnums,eventtimes,xs,ys,cxy)
 			except NameError:
 				continue
 			continue
