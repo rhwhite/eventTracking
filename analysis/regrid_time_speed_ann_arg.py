@@ -109,9 +109,13 @@ for isumlat in range(0,nsumlats):
         filetimespan = "3hrly"
 
         file = xrayOpen(DirI + FileI)
+
+        conservregrid(file,'lon','lat','years',sumlat,sumlon)
         lons = file['lon'].values
         lats = file['lat'].values
         years = file['years'].values
+
+
 
         nlons = len(lons)
         nlats = len(lats)
@@ -191,7 +195,6 @@ for isumlat in range(0,nsumlats):
 
         ncfile.close()
 
-Ngl.end()
 
 
 

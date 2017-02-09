@@ -330,112 +330,10 @@ while eventnum < nevents:
 timeend = time.time()
 print "time to read and process = " + str(timeend - timestart) + " seconds"
 
-# Manually test it works ok for events in the middle of a chunk:
-"""
-istart = 63
-istop = 65
-
-print 'maxt'
-print maxt[istart:istop]
-print 'mint'
-print mint[istart:istop]
-print 'maxx'
-print maxx[istart:istop]
-print 'miny'
-print miny[istart:istop]
-print 'centerx'
-print centerx[istart:istop]
-print 'centery'
-print centery[istart:istop]
-print 'meant'
-print meant[istart:istop]
-print 'startx'
-print startx[istart:istop]
-print 'endx'
-print endx[istart:istop]
-print 'starty'
-print starty[istart:istop]
-print 'endy'
-print endy[istart:istop]
-"""
 print(np.genfromtxt(Dir + TxtFileIn,dtype='int',skip_header = 1, max_rows = 6,usecols = (0,2)))
                         #textdata = np.loadtxt(Dir + TxtFileIn,skiprows = 1, usecols = (0,2,3,4,6))
 print(np.genfromtxt(Dir + TxtFileIn,dtype='string',skip_header = 1, max_rows = 6,usecols = (3,4,6)))
 
-
-"""
-with open(Dir + TxtFileIn,"r") as textFile:
-	next(textFile)	#Skip header line
-
-	for lines in textFile:	#loop through all lines
-		line = lines.split('\t')
-	        eventnum = int(float(line[0]))
-        	if (eventnum % 5000000 == 0):
-                	print "eventnum: " + str(eventnum)
-		if eventnum == preeventnum:
-			#a,b,c,d,e,f = int(re.findall(
-			maxt[index] = max(maxt[index],int(re.findall(r'\d+',line[2])[0]))
-
-			minx[index] = min(minx[index],int(re.findall(r'\d+',line[3])[0]))
-			maxx[index] = max(maxx[index],int(re.findall(r'\d+',line[3])[1]))
-
-			miny[index] = min(miny[index],int(re.findall(r'\d+',line[4])[0]))
-			maxy[index] = max(maxy[index],int(re.findall(r'\d+',line[4])[1]))
-			listt.append(int(re.findall(r'\d+',line[2])[0]))
-			listcenterx.append(int(re.findall(r'\d+',line[6])[0]))
-			listcentery.append(int(re.findall(r'\d+',line[6])[1]))
-                        eventcount += 1
-
-		else:
-			if (preeventnum > 0): #then it's not the very first event
-				#new event: take mean of center x, center y and t and put into array before updating index
-				centerx[index] = np.mean(listcenterx)
-				centery[index] = np.mean(listcentery)
-				meant[index] = np.mean(listt)
-				startx[index] = listcenterx[0]
-				starty[index] = listcentery[0]
-				endx[index] = listcenterx[-1]
-				endy[index] = listcentery[-1]
-                                if eventcount == 1:
-                                        maxzonalspeed[index] = 0.0      # Stationary event by definition of one timestep
-                                elif eventcount <= speedtspan:
-                                        diffs = listcenterx[eventcount-1] - listcenterx[0]
-                                        maxzonalspeed[index] = np.cos(np.radians(lats[listcentery[int(eventcount/2 -1)]])) * R * 2.0 * math.pi * diffs/(nlons * 3.0 * eventcount * 60.0 * 60.0)   # speed in m/s
-                                elif eventcount > speedtspan:
-                                        diffs = np.array([x - listcenterx[i-speedtspan] for i,x in enumerate(listcenterx)][speedtspan:])
-                                        coslat = np.cos(np.radians(lats[listcentery[speedtspan:]]))
-                                        maxindex = np.argmax(abs(diffs)*coslat)
-                                        maxzonalspeed[index] = np.cos(np.radians(lats[listcentery[maxindex]])) * R * 2.0 * math.pi * diffs[maxindex]/(nlons * 3.0 * speedtspan * 60.0 * 60.0)   # speed in m/s
-                                else:
-                                        sys.exit("eventcount is less than 0?")
-
-							
-			#refresh list
-			#update index for new event
-			index = eventnum-event1
-			preeventnum = eventnum
-
-	#               centerxstart[index] = int(re.findall(r'\d+',line[6])[0])
-	#               centerystart[index] = int(re.findall(r'\d+',line[6])[1])
-
-			mint[index] = int(re.findall(r'\d+',line[2])[0])
-			maxt[index] = int(re.findall(r'\d+',line[2])[0])
-
-			minx[index] = int(re.findall(r'\d+',line[3])[0])
-			maxx[index] = int(re.findall(r'\d+',line[3])[1])
-
-			miny[index] = int(re.findall(r'\d+',line[4])[0])
-			maxy[index] = int(re.findall(r'\d+',line[4])[1])
-
-			listt = [int(re.findall(r'\d+',line[2])[0])]
-			listcenterx = [int(re.findall(r'\d+',line[6])[0])]
-			listcentery = [int(re.findall(r'\d+',line[6])[1])]
-			eventcount=1
-
-		if args.test == 1:
-			if index == 10: break
-
-"""
 
 timeend = time.time()
 print "this took " + str(timeend - timestart) + " seconds"
@@ -517,7 +415,7 @@ else:
 #for ievent in range(minevent, minevent + 3): ### For testing!!!
 for ievent in range(minevent,maxrun):
 
-        index = ievent-minevent
+    index = ievent-minevent
 	tmin = max(0,mint[index]-1)
 	tmax = min(ntimes,maxt[index]+1)
 
@@ -554,8 +452,8 @@ for ievent in range(minevent,maxrun):
 			break
 		else:
 			exit("couldn't find enough memory")	
-	
-	if (ievent % 5000000 == 0):
+
+    if (ievent % 5000000 == 0):
 		print "ievent: " + str(ievent)
 
 	tminsel = max((tmin-tminchunk)-1,0) 
@@ -564,10 +462,11 @@ for ievent in range(minevent,maxrun):
 	eventsin_small = eventschunk[tminsel:tmaxsel,ymin:ymax,xmin:xmax]
 	data_mask_small = np.ma.array(eventsin_small,mask=(eventsin_small == ievent))
 	SurfA_small = SurfA[ymin:ymax,xmin:xmax].values
-	
-        precipin_small = precipchunk[tminsel:tmaxsel,ymin:ymax,xmin:xmax]
-	try:	
-        	data_mask_max = np.amax(data_mask_small.mask,axis=0)
+
+    precipin_small = precipchunk[tminsel:tmaxsel,ymin:ymax,xmin:xmax]
+
+    try:
+        data_mask_max = np.amax(data_mask_small.mask,axis=0)
 	except ValueError:
 		print ievent
 		print mint[ievent-minevent]
@@ -581,17 +480,19 @@ for ievent in range(minevent,maxrun):
 		print data_mask_small
 		print data_mask_small.shape
 		exit("ValueError")
-	ncfile['uniquegridboxspan'][ievent-minevent] = (np.sum([data_mask_max]))
+        ncfile['uniquegridboxspan'][ievent-minevent] = (np.sum([data_mask_max]))
         ncfile['gridboxspan'][ievent-minevent] = (np.sum([data_mask_small.mask]))
-        ncfile['totalprecip'][ievent-minevent] = (0.001 * np.nansum([data_mask_small.mask * precipin_small]))
-
-	# SurfA is in m2
+        # there used to be a factor of 0.001 here to convert from mm to m.
+        # but we want to keep it in mm!
+        #        ncfile['totalprecip'][ievent-minevent] = (0.001 * np.nansum([data_mask_small.mask * precipin_small]))
+        ncfile['totalprecip'][ievent-minevent] = (np.nansum([data_mask_small.mask * precipin_small]))
+       # SurfA is in m2
         ncfile['uniquegridboxspanSA'][ievent-minevent] = (np.sum([data_mask_max*SurfA_small]))
-	ncfile['gridboxspanSA'][ievent-minevent] = (np.sum([data_mask_small.mask*SurfA_small[None,:,:]]))
+        ncfile['gridboxspanSA'][ievent-minevent] = (np.sum([data_mask_small.mask*SurfA_small[None,:,:]]))
         # Factor of 0.001 to convert from mm to m
         # SurfS_small is in m2
         # So OtotalP is in m3
-	ncfile['totalprecipSA'][ievent-minevent] = (0.001 * np.nansum([data_mask_small.mask * precipin_small * SurfA_small[None,:,:]]))
+        ncfile['totalprecipSA'][ievent-minevent] = (0.001 * np.nansum([data_mask_small.mask * precipin_small * SurfA_small[None,:,:]]))
 
 ncfile['timespan'][:] = (maxt[:]-mint[:]+ 1) * tmult
 

@@ -35,10 +35,15 @@ parser.add_argument('--speedtspan',metavar='speedtspan',type=int,nargs='?',defau
 parser.add_argument('--tbound1',metavar='tbound1',type=float,nargs='+',help='lower bounds')
 parser.add_argument('--tbound2',metavar='tbound2',type=float,nargs="+",help='upper bounds')
 parser.add_argument('--unit',type=str,nargs=1,help='units of split type')
-parser.add_argument('--Data',type=str,nargs=1,help='type of Data, TRMM, ERAI, or CESM')
-parser.add_argument('--Version',type=str,nargs=1,help='Version of Data, Standard, low, 6th_from6 etc')
-parser.add_argument('--anstartyr',type=int,nargs=1,help='start year for analysis')
-parser.add_argument('--anendyr',type=int,nargs=1,help='end year for analysis')
+parser.add_argument('--Data1',type=str,nargs=1,help='type of Data, TRMM, ERAI, or CESM')
+parser.add_argument('--Version1',type=str,nargs=1,help='Version of Data, Standard, low, 6th_from6 etc')
+parser.add_argument('--anstartyr1',type=int,nargs=1,help='start year for analysis')
+parser.add_argument('--anendyr1',type=int,nargs=1,help='end year for analysis')
+parser.add_argument('--Data2',type=str,nargs=1,help='type of Data, TRMM, ERAI,or CESM')
+parser.add_argument('--Version2',type=str,nargs=1,help='Version of Data,Standard, low, 6th_from6 etc')
+parser.add_argument('--anstartyr2',type=int,nargs=1,help='start year foranalysis')
+parser.add_argument('--anendyr2',type=int,nargs=1,help='end year for analysis')
+
 parser.add_argument('--minlat',type=int,nargs='?',default=-45,help='min lat')
 parser.add_argument('--maxlat',type=int,nargs='?',default=45,help='max lat')
 parser.add_argument('--minlon',type=int,nargs='?',default=0,help='min lon')
@@ -49,6 +54,8 @@ parser.add_argument('--minGB',type=int,nargs='?',default=0,help='minimum number 
 
 
 args = parser.parse_args()
+
+print args.Data
 
 splittype = args.splittype[0]
 speedtspan = args.speedtspan
@@ -440,8 +447,6 @@ for iday in range(0,nbounds):
     else:
         titlesDen.append("Event density: >" + str(tbound1[iday]) + unit + ' events')
         titlesPrec.append("Event precip: >" + str(tbound1[iday]) + unit + ' events')
-    print np.nanmean(DenPercent[iday+arrayindex,:,:])
-    print np.nanmean(PrecipPercent[iday+arrayindex,:,:])
 
 
 # And now plot 

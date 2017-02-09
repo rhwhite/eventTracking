@@ -52,6 +52,11 @@ parser.add_argument('--endyr',type=int,nargs=1,help='end year for analysis')
 parser.add_argument('--SA',type=int,nargs='?',default=1,help='do surface area variables (1) or not (0)?')
 parser.add_argument('--minGB',type=int,nargs='?',default=-1,help='minimum number of unique grid boxes to count as an event')
 
+parser.add_argument('--minlat',metavar='minlat',type=int,nargs=1,
+                    help='minimum latitude')
+parser.add_argument('--maxlat',metavar='maxlat',type=int,nargs=1,
+                    help='maximum latitude')
+ 
 
 args = parser.parse_args()
 print "here's what I have as arguments: ", args
@@ -149,7 +154,7 @@ varlistin.append((str(newvar)))
 if SA == 1:
         varlistin.extend(('gridboxspanSA','totalprecipSA','uniquegridboxspanSA'))
 
-varlistin.extend(('gridboxspan','totalprecip','uniquegridboxspan','timespan','tstart','tmean','xcenterstart','xcenterend','ycenterstart','ycenterend','xcentermean','ycentermean','xmin','xmax','ymin','ymax'))
+varlistin.extend(('timespan','tstart','tmean','xcenterstart','xcenterend','ycenterstart','ycenterend','xcentermean','ycentermean','xmin','xmax','ymin','ymax','ydist'))
 
 print varlistin
 
@@ -168,7 +173,6 @@ nf8vars = len(f8vars)
 nevents = len(datain.events)
 chunksize = nevents
 
-
 def runchunk(nevents,chunksize,writeidxchunk):
     for chunkevent in range(0,nevents,chunksize):
         chunkmax = np.amin([chunkevent+chunksize,nevents])
@@ -186,6 +190,12 @@ def runchunk(nevents,chunksize,writeidxchunk):
         writeidx = 0
  
         for ievent in range(chunkevent,chunkmax):
+            if latstart[ievent-chunkevent] < minlat or
+                latstart[ievent-chunkevent] > maxlat:
+                continue
+            if latend[ievent-chunkevent] < minlat or
+                latstart[ievent-chunkevent] > maxlat:
+                continue
             if SAgridboxes[ievent-chunkevent] > minGB:      # if unique gridboxes exceed specified threshold
                 if tbound1[ibound] < 0:
                     if (splitvar[ievent-chunkevent] >= tbound1[ibound]) and (splitvar[ievent-chunkevent] < tbound2[ibound]):
@@ -222,6 +232,10 @@ def getsplitvar(chunkfirst,chunkmax):
         except AttributeError:
             print("timespan has no units. You should really rerun process_output and write out units for your variables. For now, I will assume hours, but on your head be it if that's wrong")
             splitvar = datain['timespan'][chunkfirst:chunkmax].values/24.0
+
+        latstarts = lats[datain['ycenterstart'][chunkfirst:chunkmax]]
+        latends = lats[datain['ycenterend'][chunkfirst:chunkmax]]
+
 
     elif splittype == "speed":
         #xcenterstart = datain['xcenterstart'][chunkfirst:chunkmax].values
@@ -294,7 +308,10 @@ for ibound in range(0,nbounds):
     else:
         tboundtitle = str(tbound1[ibound]) + '-' + str(tbound2[ibound])
 
-    FileO = 'testPrecip_' + fileadd + tboundtitle + unit + "_" + str(startyr) + '-' + str(endyr) + '_' + Version + fileaddGB + '.nc'
+
+    FileO = ('testPrecip_' + fileadd + tboundtitle + unit + "_" + str(startyr) +
+            '-' + str(endyr) + '_' + Version + fileaddGB + '_' + str(minlat) +
+            'N-' + str(maxlat) + 'N.nc')
 
     print FileO
     # Create new file 
