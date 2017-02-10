@@ -17,6 +17,7 @@ import math
 from scipy import stats
 from rhwhitepackages.readwrite import shiftlons
 from rhwhitepackages.readwrite import xrayOpen
+from rhwhitepackages.regrid import conserveRegrid
 import argparse
 import resource
 
@@ -86,12 +87,7 @@ if Data == "TRMM":
     Fstartyr = 1998
     Fendyr = 2014
     PrecipClimDir = "/home/disk/eos4/rachel/Obs/TRMM/"
-
-    if sumlats > 0:
-        PrecipClimFile = "Regrid_" + str(sumlats) + "_" + str(sumlons) + "_SeasAnn_TRMM_1998-2014_3B42_3hrly_nonan.nc"
-    else:
-        PrecipClimFile = "TRMM_1998-2014_clim_ann_1998-2014.nc"
-
+    PrecipClimFile = "TRMM_1998-2014_clim_ann_1998-2014.nc"
 
     if Version == '5th_nanto25':
         DirIn = '/home/disk/eos4/rachel/EventTracking/FiT_RW/TRMM_output/5thresh_nto25/Precip/'
@@ -108,27 +104,19 @@ elif Data == "TRMMERAIgd":
     Fstartyr = 1998
     Fendyr = 2014
     PrecipClimDir = "/home/disk/eos4/rachel/Obs/TRMM/"
-    PrecipClimFile = "Regrid_" + str(sumlats) + "_" + str(sumlons) + "_regrid2ERAI_TRMM_3B42_1998-2014_annclim.nc"
+    PrecipClimFile = "regrid2ERAI_TRMM_3B42_1998-2014_annclim.nc"
 
 elif Data == "ERAI":
     Fstartyr = 1980
     Fendyr = 2014
     PrecipClimDir = '/home/disk/eos4/rachel/Obs/ERAI/Precip_3hrly/'
-    if sumlats > 0:
-        PrecipClimFile = 'Regrid_' + str(sumlats) + '_' + str(sumlons) + '_ncra_ERAI_Totalprecip_1980-2015_preprocess.nc' #'SeasAnn_ERAI_Totalprecip_1980-2015_preprocess.nc'
-    else:
-        PrecipClimFile = 'ERAI_Totalprecip_1980-2015_annmean.nc'
-
+    PrecipClimFile = 'ERAI_Totalprecip_1980-2015_annmean.nc'
 
 elif Data == "ERA20C":
     Fstartyr = 1980
     Fendyr = 2011
     PrecipClimDir = '/home/disk/eos4/rachel/Obs/ERA_20C/'
-    if sumlats > 0:
-        PrecipClimFile = 'Regrid_' + str(sumlats) + '_' + str(sumlons) + '_ERA_20C_Ann_Totalprecip_' + str(Fstartyr) + '-' + str(Fendyr) + '.nc'
-    else:
-        PrecipClimFile = 'ERA_20C_Ann_Totalprecip_' + str(Fstartyr) + '-' + str(Fendyr) + '.nc'
-
+    PrecipClimFile = 'ERA_20C_Ann_Totalprecip_' + str(Fstartyr) + '-' + str(Fendyr) + '.nc'
 
 elif Data == "CESM":
     Fstartyr = 1990
@@ -136,33 +124,21 @@ elif Data == "CESM":
     DirIn = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/CESM_output/' + Version + str(Fstartyr) + '/proc/'
  
     PrecipClimDir = '/home/disk/eos4/rachel/EventTracking/Inputs/CESM/f.e13.FAMPIC5.ne120_ne120.1979_2012.001/'
-    if sumlats > 0:
-        PrecipClimFile = 'Regrid_' + str(sumlats) + '_' + str(sumlons) + '_ncra_f.e13.FAMIPC5.ne120_ne120_TotalPrecip_1979-2012.nc'
-    else:
-        PrecipClimFile = 'ncra_f.e13.FAMIPC5.ne120_ne120_TotalPrecip_1979-2012.nc'
+    PrecipClimFile = 'ncra_f.e13.FAMIPC5.ne120_ne120_TotalPrecip_1979-2012.nc'
 
 DirIn = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/' + Data + '_output/' + Version + str(Fstartyr) + '/proc/'
 
 FileInPrecip = xrayOpen(PrecipClimDir + PrecipClimFile)
 
 if Data in ['TRMM']:
-    if sumlats > 0:
-        latin = FileInPrecip['lat']
-        invar = 'PrecipAnnClim'
-    else:
-        latin = FileInPrecip['latitude']
-        invar = 'pcp'
+    latin = FileInPrecip['latitude']
+    invar = 'pcp'
 
 elif Data in ['TRMMERAIgd']:
     latin = FileInPrecip['lat']
     invar = 'pcp'
 
-elif Data in ["ERAI"]:
-    print PrecipClimDir + PrecipClimFile
-    latin = FileInPrecip['lat']
-    invar = 'tpnew'
-
-elif Data in ["ERA20C"]:
+elif Data in ["ERAI","ERA20C"]:
     latin = FileInPrecip['lat']
     invar = 'tpnew'
 
@@ -175,14 +151,9 @@ if latin[0] > latin[1]:
                                         .sel(time=slice(str(anstartyr),str(anendyr)))
                                         .mean(dim='time'))
 else:
-    if sumlats > 0:
-        PrecipIn = (FileInPrecip[invar].sel(lat=slice(MinLatF,MaxLatF))
-                                        .sel(time=slice(anstartyr,anendyr))
-                                        .mean(dim='time'))
-    else:
-        PrecipIn = (FileInPrecip[invar].sel(latitude=slice(MinLatF,MaxLatF))
-                                        .sel(time=slice(anstartyr,anendyr))
-                                        .mean(dim='time'))
+    PrecipIn = (FileInPrecip[invar].sel(latitude=slice(MinLatF,MaxLatF))
+                                    .sel(time=slice(str(anstartyr),str(anendyr)))
+                                    .mean(dim='time'))
 
 print PrecipIn
 try:
@@ -195,7 +166,7 @@ try:
     else:
         error("unexpected unit in Precip file")
 except AttributeError:
-    if np.amax(PrecipIn) < 1.0:
+    if np.amax(PrecipIn) < 5.0:
         print "guessing we need to convert precip units! You should check this!"
         PrecipIn = PrecipIn * 24.0 #convert to mm/day
     else:
@@ -209,6 +180,8 @@ def regressmaps(m,c,r,p,stderr,A,linreg,nlats,nlons):
 
 def plotmap(plotvars1,plotvars2,plotmin1,plotmax1,plotmin2,plotmax2,vartitle1,vartitle2,title,figtitle,lons,lats,minlon,maxlon,minlat,maxlat):
     nplots = plotvars1.shape[0]
+    print nplots
+
     wkres = Ngl.Resources()
     wkres.wkColorMap = "precip_diff_12lev"
     wks_type = "eps"
@@ -291,7 +264,7 @@ def plotmap(plotvars1,plotvars2,plotmin1,plotmax1,plotmin2,plotmax2,vartitle1,va
             res.tiMainString = vartitle2[iplot] + "; mean = {:2.3g}".format(SumPrecipPercent) + "%"
         else:
             res.tiMainString = vartitle2[iplot] + "; mean = {:2.3g}".format(np.nanmean(tempplot)) + "%"
-            toplot.append(Ngl.contour_map(wks,tempplot,res))
+        toplot.append(Ngl.contour_map(wks,tempplot,res))
 
     textres = Ngl.Resources()
     textres.txFontHeightF = 0.015
@@ -326,10 +299,11 @@ if minGB > 0:
 else:
     fileadd = ''
 
-if sumlats > 0:
-    FileIn = 'DenDirSpd_Map_Ann_' + splitname + '_' + str(tbound1[iday]) + '-' + str(tbound2[iday]) + unit + '_' + mapping + '_' + Data + "_" + str(Fstartyr) + '-' + str(Fendyr) + '_' + Version + fileadd + '_regrid_' + str(sumlons) + 'lons_' + str(sumlats) + 'lats.nc'
-else:
-    FileIn = 'DenDirSpd_Map_Ann_' + splitname + '_' + str(tbound1[iday]) + '-' + str(tbound2[iday]) + unit + '_' + mapping + '_' + Data + "_" + str(Fstartyr) + '-' + str(Fendyr) + '_' + Version + fileadd +  '.nc'
+fileOadd = fileadd
+if sumlons > 0:
+    fileOadd = fileOadd + '_' + str(sumlons) + 'sumlons'
+
+FileIn = 'DenDirSpd_Map_Ann_' + splitname + '_' + str(tbound1[iday]) + '-' + str(tbound2[iday]) + unit + '_' + mapping + '_' + Data + "_" + str(Fstartyr) + '-' + str(Fendyr) + '_' + Version + fileadd +  '.nc'
 
 if splittype == "maxspeed":
     diradd = "MaxSpeeds"
@@ -376,10 +350,7 @@ Precipdays = np.zeros([arraynbounds,nyears,nlats,nlons])   # + 1 for total preci
 
 # read in data for each category.
 for iday in range(0,nbounds):
-    if sumlats > 0:
-        FileIn = 'DenDirSpd_Map_Ann_' + splitname + '_' + str(tbound1[iday]) + '-' + str(tbound2[iday]) + unit + '_' + mapping + '_' + Data + "_" + str(Fstartyr) + '-' + str(Fendyr) + '_' + Version + fileadd + '_regrid_' + str(sumlons) + 'lons_' + str(sumlats) + 'lats.nc'
-    else:
-        FileIn = 'DenDirSpd_Map_Ann_' + splitname + '_' + str(tbound1[iday]) + '-' + str(tbound2[iday]) + unit + '_' + mapping + '_' + Data + "_" + str(Fstartyr) + '-' + str(Fendyr) + '_' + Version + fileadd + '.nc'
+    FileIn = 'DenDirSpd_Map_Ann_' + splitname + '_' + str(tbound1[iday]) + '-' + str(tbound2[iday]) + unit + '_' + mapping + '_' + Data + "_" + str(Fstartyr) + '-' + str(Fendyr) + '_' + Version + fileadd + '.nc'
 
     #Get lons and lats
     print DirIn + '/' + diradd + '/' + FileIn
@@ -392,7 +363,6 @@ for iday in range(0,nbounds):
         else:
             Dendays[iday,:,:,:] = FileIn['TDensity'].sel(lat=slice(MinLatF,MaxLatF),years=slice(anstartyr,anendyr)) 
             Precipdays[iday,:,:,:] = FileIn['TPrecip'].sel(lat=slice(MinLatF,MaxLatF),years=slice(anstartyr,anendyr))
-
 
     except KeyError:    # time is year, not years
         if switchlats:
@@ -410,29 +380,29 @@ PrecipAnnAvg = np.nanmean(Precipdays,axis=1)
 DenAll = np.nansum(DenAnnAvg,axis=0)
 PrecipAll = np.nansum(PrecipAnnAvg,axis=0)
 
-
-
-#PrecipAllPercent = PrecipAll/365.0 # Convert from mm/year to mm/day
 PrecipAllPercent = 100.0 * np.divide(PrecipAll,PrecipIn*365.0)  # convert PrecipIn from mm/day to mm/yr before dividing
 
 SumPrecipPercent = 100.0 * np.nansum(PrecipAll)/np.nansum(PrecipIn * 365.0)
-DenPercent = np.zeros(DenAnnAvg.shape)
-PrecipPercent = np.zeros(PrecipAnnAvg.shape)
+denPercent = np.zeros(DenAnnAvg.shape)
+precipPercent = np.zeros(DenAnnAvg.shape)
 
 titlesDen = []
 titlesPrec = []
 
 arrayindex = 0
 if splittype == 'day':
-    DenPercent[0,:,:] = DenAll / (difflat * difflon)
-    PrecipPercent[0,:,:] = PrecipAllPercent # Percent of total TRMM precip falling in these events
+    denPercent[0,:,:] = DenAll / (difflat * difflon)
+    precipPercent[0,:,:] = PrecipAllPercent # Percent of total TRMM precip falling in these events
     titlesDen.append("Total annual event density, events/(yr deg~S1~2 )")
     titlesPrec.append("Percentage of total precipitation captured in events")
     arrayindex += 1
 
 for iday in range(0,nbounds):
-    DenPercent[iday+arrayindex,:,:] = 100.0 * (np.where(DenAll > 0, np.divide(DenAnnAvg[iday,:,:],DenAll),0.0)) 
-    PrecipPercent[iday+arrayindex,:,:] = 100.0 * (np.where(PrecipAll > 0, np.divide(PrecipAnnAvg[iday,:,:],PrecipAll),0.0))
+    denPercent[iday+arrayindex,:,:] = 100.0 * (np.where(DenAll > 0, np.divide(DenAnnAvg[iday,:,:],DenAll),0.0)) 
+    # use to look at percent of total precip, rather than total captured precip
+    #precipPercent[iday+arrayindex,:,:] = 100.0 * (np.where(PrecipIn > 0,
+    #                                                np.divide(PrecipAnnAvg[iday,:,:],PrecipIn * 365.0),0.0))
+    precipPercent[iday+arrayindex,:,:] = 100.0 * (np.where(PrecipAll > 0, np.divide(PrecipAnnAvg[iday,:,:],PrecipAll),0.0))
 
     if tbound2[iday] < tbound1[iday]*10 or tbound1[iday] == 0 or tbound2[iday] == 0:
         titlesDen.append('Event density: ' + str(tbound1[iday]) + ' to ' + str(tbound2[iday]) + unit + ' events')
@@ -440,15 +410,30 @@ for iday in range(0,nbounds):
     else:
         titlesDen.append("Event density: >" + str(tbound1[iday]) + unit + ' events')
         titlesPrec.append("Event precip: >" + str(tbound1[iday]) + unit + ' events')
-    print np.nanmean(DenPercent[iday+arrayindex,:,:])
-    print np.nanmean(PrecipPercent[iday+arrayindex,:,:])
+    print np.nanmean(denPercent[iday+arrayindex,:,:])
+    print np.nanmean(precipPercent[iday+arrayindex,:,:])
+
+# define dimension for lifetime as minimum lifespan. -100 means all
+lifetimemin =([-100] + tbound1)
+
+denPercent = xray.DataArray(denPercent,
+                        coords=[('lifetimemin',lifetimemin),('lat',lats),('lon',lons)],
+                        attrs=[('units','%'),
+                               ('longname','\% of total events')])
+precipPercent = xray.DataArray(precipPercent,
+                        coords=[('lifetimemin',lifetimemin),('lat',lats),('lon',lons)],
+                        attrs=[('units','%'),
+                               ('longname','% of total precip')])
 
 
 # And now plot 
 
 # Plot 1: Average density, and percentage easterly
 
-figtitlein = FigDir + 'Paper_DenPrecipClim_' + Data + '_' + Version + '_Ana' + str(anstartyr) + '-' + str(anendyr) + '_' + str(tbound1[0]) + '_to_' + str(tbound2[nbounds-1]) + unit + fileadd
+figtitlein = (FigDir + 'Paper_DenPrecipClim_' + Data + '_' + Version + '_' +
+                str(anstartyr) + '-' + str(anendyr) + '_' + str(tbound1[0]) + '_to_' +
+                str(tbound2[nbounds-1]) + unit + fileOadd)
+
 titlein = 'Events in ' + Data + " " + Version + ' years ' + str(anstartyr) + '-' + str(anendyr)
 
 if splittype == 'day':
@@ -487,7 +472,10 @@ elif splittype == 'maxspeed':
     elif Data in ["ERA20C"]:
         clims1,clims2,clims3,clims4 = [0.0,90.0,0.0,0.0,0.0,0.0],[15,100.0,4.0,3.0,2.0,4.0],[0.0,0.0,0.0,0.0,0.0,0.0],[100,70.0,30.0,50.0,50.0,50.0]
 
-plotmap(DenPercent,PrecipPercent,clims1,clims2,clims3,clims4 ,titlesDen,titlesPrec,titlein,figtitlein,lons,lats,MinLonF,MaxLonF,MinLatF,MaxLatF)
+# convert denPercent by summing over sumlons and sumlats
+denPercent = conserveRegrid(denPercent,'lat','lon',lats,lons,sumlats,sumlons)
+
+plotmap(denPercent,precipPercent,clims1,clims2,clims3,clims4 ,titlesDen,titlesPrec,titlein,figtitlein,lons,lats,MinLonF,MaxLonF,MinLatF,MaxLatF)
 
 # 
 

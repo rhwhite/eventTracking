@@ -190,20 +190,18 @@ def isinregion(ilat,ilon):
 
 
 # In[ ]:
-
-minlon = -180
-maxlon = 180
-minlat = -45
-maxlat = -30
-
 checklons = True
 if minlon == 0 and maxlon == 360:
     checklons = False
 elif minlon ==-180 and maxlon == 180:
     checklons = False
 
-nevents = len(datain.events)
-
+if test:
+    nevents = 100
+    filenameadd = "test_"
+else:
+    nevents = len(datain.events)
+    filenameadd = ""
 
 for ievent in range(0,nevents):
     if (ievent % 100000 == 0):
@@ -258,10 +256,10 @@ averagegridboxes = averagegridboxes/count
 
 for LSindex in range(0,2):
     if LSindex == 0:
-        filename = ('SeaAverages_' + '{:d}'.format(minlat) + 'N-' +
+        filename = (filenameadd + 'SeaAverages_' + '{:d}'.format(minlat) + 'N-' +
                     '{:d}'.format(maxlat) + 'N.txt')
     elif LSindex == 1:
-        filename = ('LandAverages_' + '{:d}'.format(minlat) + 'N-' +
+        filename = (filenameadd + 'LandAverages_' + '{:d}'.format(minlat) + 'N-' +
                     '{:d}'.format(maxlat) + 'N.txt')
     with open(DirI + filename, 'w') as text_file:
         text_file.write('Domain averages for ' + '{:d}'.format(minlat) + 'N-' +
