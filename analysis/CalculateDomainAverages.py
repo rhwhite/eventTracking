@@ -39,6 +39,7 @@ parser.add_argument('--Version',type=str,nargs=1,
 parser.add_argument('--anstartyr',type=int,nargs=1,
                     help='start year for analysis')
 parser.add_argument('--anendyr',type=int,nargs=1,help='end year for analysis')
+parser.add_argument('--test',type=int,nargs='?',default=0,help='1 for test')
 
 
 args = parser.parse_args()
@@ -60,6 +61,7 @@ minlon = args.minlon
 maxlon = args.maxlon
 minlat = args.minlat
 maxlat = args.maxlat
+test = args.test
 
 diradd = getdirectory(splittype)
 nbounds = len(tbound1)
@@ -196,8 +198,8 @@ if minlon == 0 and maxlon == 360:
 elif minlon ==-180 and maxlon == 180:
     checklons = False
 
-if test:
-    nevents = 100
+if test == 1:
+    nevents = 10000
     filenameadd = "test_"
 else:
     nevents = len(datain.events)
@@ -270,21 +272,21 @@ for LSindex in range(0,2):
                         '(degrees) averagepreciphr (mm/hr), averagepreciphr ' 
                         '(mm/gridbox/hr) \n')
         for ibound in range(0,nbounds):
-            text_file.write('{:d}'.format(tbound1[ibound]) + '-' +
-                            '{:d}'.format(tbound2[ibound]) + ' hours,   ' +
-                            '{:d}'.format(count[ibound,LSindex]) +
+            text_file.write('{:.1f}'.format(tbound1[ibound]) + '-' +
+                            '{:.1f}'.format(tbound2[ibound]) + ' hours,   ' +
+                            '{:.2e}'.format(count[ibound,LSindex]) +
                             ' events,    ' +
-                            '{:f}'.format(averageydist[ibound,LSindex]) +
+                            '{:.2f}'.format(averageydist[ibound,LSindex]) +
                             'degrees,    ' +
-                            '{:f}'.format(averagexdist[ibound,LSindex]) +
+                            '{:.2f}'.format(averagexdist[ibound,LSindex]) +
                             'degrees,    ' +
-                            '{:f}'.format(averagetime[ibound,LSindex]) +
+                            '{:.2f}'.format(averagetime[ibound,LSindex]) +
                             'hours,      ' +
-                            '{:f}'.format(averagegridboxes[ibound,LSindex]) +
+                            '{:.2e}'.format(averagegridboxes[ibound,LSindex]) +
                             'gridboxes   ' +
-                            '{:f}'.format(averageprecipperhr[ibound,LSindex]) +
+                            '{:.2e}'.format(averageprecipperhr[ibound,LSindex]) +
                             ' m/hr,      ' +
-                            '{:f}'.format(averageprecipperareahr[ibound,LSindex])
+                            '{:.2e}'.format(averageprecipperareahr[ibound,LSindex])
                             + 'm/hr/gridbox \n')
 
 
