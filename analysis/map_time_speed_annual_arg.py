@@ -24,7 +24,7 @@ import resource
 
 rsrcV = resource.RLIMIT_AS
 soft, hard = resource.getrlimit(rsrcV)
-resource.setrlimit(rsrcV, (50000000000, hard)) #limit memory usage
+resource.setrlimit(rsrcV, (130000000000, hard)) #limit memory usage
 #                          137438953472
 soft, hard = resource.getrlimit(rsrcV)
 
@@ -307,8 +307,6 @@ nyears = endyr - startyr + 1
 
 minev = np.zeros([nbounds,nyears], np.int)
 maxev = np.zeros([nbounds,nyears], np.int)
-
-
 
 # To run all ibounds at once, need to keep track of a. Input data, and b. Output data
 writeFiles = []
