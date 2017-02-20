@@ -60,10 +60,10 @@ minGB=0
 mapping = 'center'
 
 #minLat = [-45,-10,8,20,15]; maxLat = [-25,10,15,35,30]; minLon = [185,120,150,140,290]; maxLon = [220,160,220,220,340]  #225
-minLat = [-10,0,20,-40]
-maxLat = [8,10,35,-25]
-minLon = [120,220,140,45]
-maxLon = [160,280,220,75]
+minLat = [  8,  2, 22,-40]
+maxLat = [  20,  8, 35,-25]
+minLon = [155,200,150, 45]
+maxLon = [200,280,180, 75]
 
 # In[4]:
 
@@ -72,8 +72,8 @@ fstartyr = 1998
 fendyr = 2014
 precipClimDir = "/home/disk/eos4/rachel/Obs/TRMM/"
 precipClimFile = "TRMM_3B42_1998-2014_annmean.nc"
-precipRegFile = 'regress_TRMM_3B42_1998-2014_annmean.nc'
-precipReg2File = 'regress_TRMM_3B42_1999-2014_annmean.nc'
+precipRegFile = 'regress_TRMM_3B42_1999-2014_annmean.nc'
+precipReg2File = 'regress_TRMM_3B42_1998-2014_annmean.nc'
 
 olrDir = '/home/disk/eos4/rachel/Obs/OLR/'
 olrRegFile = 'regress_olr_1999-2013.nc'
@@ -120,8 +120,8 @@ def ploteachpanel(precipclimin,origlonsin,origlatsin,titlein):
         newprecip2.coords['longitude'] = newprecip2.coords['longitude'] + 360
         precipclim = xr.concat((precipclimin.sel(longitude=slice(0,np.amax(origlonsin)+1)),newprecip2),dim='longitude')
     else:
-	    precipclim = precipclimin 
-    
+       precipclim = precipclimin
+
     precipclim.plot(robust=True) # robust=True takes away outliers from colorbar selection process
     plt.title(titlein)
     ax = plt.gca()
@@ -208,20 +208,29 @@ if np.amax(origlonsin) < 190:
                             dim='longitude')
 
 signs = OLRnew2[0,:,:].values * precipclim[0,:,:].values
-print signs
-
 
 OLRprecip = precipclim.copy(deep=True)
-print OLRprecip
 for ilon in range(0,len(OLRprecip.longitude)):
     for ilat in range(0,len(OLRprecip.latitude)):
         if signs[ilat,ilon] > 0: 
             OLRprecip[0,ilat,ilon] = 0.0
 
-print OLRprecip
-precipplot(OLRprecip,OLRprecip.coords['longitude'],OLRprecip.coords['latitude'],'Regression' +
-    ' of precip masked by NOAA interpolated OLR from 1999-2013',1,1)
-plt.savefig(FigDir + 'OLR_Precip_Reg_withboxes.eps',format='eps',dpi=120.,facecolor='w',edgecolor='w')
+OLRprecip = OLRprecip.rename('mm/yr/yr')
+
+if OLRprecip.long_name == 'precipitation (mm/hr)':
+    OLRprecip.values = OLRprecip.values * 24.0 * 365.0
+    OLRprecip.long_name = 'precipitation (mm/yr/yr)'
+    OLRprecip.units = 'mm/yr/yr'
+else:
+    exit('i don\'t know the units, and I\'m not going to guess, sorry!')
+
+print OLRprecip 
+precipplot(OLRprecip,OLRprecip.coords['longitude'],
+           OLRprecip.coords['latitude'],' ',1,1)
+
+#precipplot(OLRprecip,OLRprecip.coords['longitude'],OLRprecip.coords['latitude'],'Regression' +
+#    ' of precip masked by NOAA interpolated OLR from 1999-2013',1,1)
+plt.savefig(FigDir + 'paper_OLR_Precip_Reg_withboxes.eps',format='eps',dpi=120.,facecolor='w',edgecolor='w')
 
 quit()
 
