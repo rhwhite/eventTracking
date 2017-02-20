@@ -17,7 +17,7 @@ from scipy import stats
 import math
 
 
-Data = "ERAI"
+Data = "OLR"
 
 Version = "Standard"
 if Data == "OLR":

@@ -4,9 +4,10 @@ Created on Wed Aug 12 17:45:25 2015
 Code to plot figures of precipitation events density and total rainfall using command line arguments
 Example use:
 python paperplot_compare_arg.py --Data1 TRMMERAIgd --Version1 Standard
---anstartyr 1998 --anendyr 2014 --Data2 ERAI --Version2 Standard --anstartyr2
---tbound1 0 1 2 5 --tbound2 1 2 5 100 --unit day --splittype day --minlat -40
---maxlat 40 --sumlons 3 --sumlats 3 --minGB 9
+--anstartyr 1998 --anendyr 2014 --Data2 ERAI --Version2 Standard
+ --tbound1 0 1 2 5 --tbound2 1 2 5 100 --unit day --splittype day --minlat -40
+ --maxlat 40 --sumlons 3 --sumlats 3 --minGB 9 --plotvar1 TPrecip --plotvar2
+ TPrecip
 @author: rachel
 """
 
@@ -23,17 +24,18 @@ from scipy import stats
 from rhwhitepackages.readwrite import *
 from rhwhitepackages.stats import regressmaps
 from rhwhitepackages.plots import *
+from rhwhitepackages.regrid import *
 import argparse
 import resource
 
 rsrcV = resource.RLIMIT_AS
 soft, hard = resource.getrlimit(rsrcV)
-print 'Soft limit starts as  :', soft
-print 'Hard limit starts as :', hard
+#print 'Soft limit starts as  :', soft
+#print 'Hard limit starts as :', hard
 resource.setrlimit(rsrcV, (50000000000, hard)) #limit memory usage
 #                          137438953472
 soft, hard = resource.getrlimit(rsrcV)
-print 'Soft limit changed to :', soft
+#print 'Soft limit changed to :', soft
 
 parser = argparse.ArgumentParser(description="map event data")
 parser.add_argument('--splittype',metavar='splittype',type=str,nargs=1,help='the type of split you want, day, speed, or maxspeed')
@@ -48,7 +50,8 @@ parser.add_argument('--Version2',type=str,nargs=1,help='Version of Data,Standard
 parser.add_argument('--anstartyr',type=int,nargs=1,help='start year foranalysis')
 parser.add_argument('--anendyr',type=int,nargs=1,help='end year for analysis')
 
-parser.add_argument('--plotvar',type=str,nargs=1,help='variable to plot')
+parser.add_argument('--plotvar1',type=str,nargs=1,help='variable to plot')
+parser.add_argument('--plotvar2',type=str,nargs=1,help='variable to plot')
 
 parser.add_argument('--minlat',type=int,nargs='?',default=-45,help='min lat')
 parser.add_argument('--maxlat',type=int,nargs='?',default=45,help='max lat')
@@ -63,6 +66,8 @@ parser.add_argument('--totals',type=int,nargs='?',default=0,
 
 
 args = parser.parse_args()
+
+print('here\'s what I have as arguments: ', args)
 
 splittype = args.splittype[0]
 speedtspan = args.speedtspan
@@ -83,7 +88,8 @@ sumlats = args.sumlats
 sumlons = args.sumlons
 minGB = args.minGB
 
-plotvar = args.plotvar[0]
+plotvar1 = args.plotvar1[0]
+plotvar2 = args.plotvar2[0]
 
 if splittype=='day':
     splitname = 'Sizes'
@@ -112,7 +118,7 @@ if sumlons > 0:
 
 # Define functions
 
-def getplotdata(Datain,Versionin,
+def getplotdata(plotvarin,Datain,Versionin,
             MinLatF,MaxLatF,
             anstartyrin,anendyrin):
 
@@ -125,7 +131,8 @@ def getplotdata(Datain,Versionin,
         Fendyrin = 2014
 
     # get precip data for dataset
-    PrecipIn = getrawPrecipAnn(Datain,Versionin,MinLatF,MaxLatF,
+    # Add +/- 5 lats for regridding
+    PrecipIn = getrawPrecipAnn(Datain,Versionin,MinLatF-5,MaxLatF+5,
                                 anstartyrin,anendyrin)
 
     # take time mean
@@ -152,19 +159,26 @@ def getplotdata(Datain,Versionin,
     FileIn = xrayOpen(DirIn + '/' + diradd + '/' + FileIn)
 
     # Always read in file to go from South to North
+    # Add 5 lats in either direction for regridded averages
     if FileIn['lat'][0] > FileIn['lat'][1]:
         switchlats = True
-        lats = FileIn['lat'][::-1].sel(lat=slice(MinLatF,MaxLatF)).values
+        lats = FileIn['lat'][::-1].sel(lat=slice(MinLatF-5,MaxLatF+5)).values
     else:
         switchlats = False
-        lats = FileIn['lat'].sel(lat=slice(MinLatF,MaxLatF)).values
+        lats = FileIn['lat'].sel(lat=slice(MinLatF-5,MaxLatF+5)).values
 
     lons = FileIn['lon'].values
 
+    yearstr = 0
     try:
-        years = FileIn['years'].sel(years=slice(anstartyr,anendyr))
+        years = FileIn['years'].sel(years=slice(anstartyr,anendyr)).values
     except KeyError:    # years is called year
-        years = FileIn['year'].sel(year=slice(anstartyr,anendyr))
+        try:
+            years = FileIn['year'].sel(year=slice(anstartyr,anendyr)).values
+        except KeyError:    # time is 'time'
+            years = FileIn['time'].sel(time=slice(
+                                        str(anstartyr),str(anendyr)))
+            yearstr = 1
 
     nlats = len(lats)
     nlons = len(lons)
@@ -173,12 +187,7 @@ def getplotdata(Datain,Versionin,
     difflat = lats[1]-lats[0]
     difflon = lons[1]-lons[0]
 
-    if args.totals == 1:
-        arraynbounds = nbounds + 1
-    else:
-        arraynbounds = nbounds
-
-    data = np.zeros([arraynbounds,nyears,nlats,nlons])      # +1 for total sum as first plot
+    data = np.zeros([nbounds,nyears,nlats,nlons])      # +1 for total sum as first plot
 
     # read in data for each category.
     for iday in range(0,nbounds):
@@ -188,93 +197,157 @@ def getplotdata(Datain,Versionin,
                     + '.nc')
 
         #Get lons and lats
-        print DirIn + '/' + diradd + '/' + FileIn
-        FileIn = xray.open_dataset(DirIn + '/' + diradd + '/' + FileIn)
+        FileIn = xrayOpen(DirIn + '/' + diradd + '/' + FileIn)
 
+        # Adding +/- 5 lats for regridding purposes
         try:
             if switchlats:
-                data[iday,:,:,:] = (FileIn[plotvar][:,::-1,:]
-                                        .sel(lat=slice(MinLatF,MaxLatF),
+                data[iday,:,:,:] = (FileIn[plotvarin][:,::-1,:]
+                                        .sel(lat=slice(MinLatF-5,MaxLatF+5),
                                              years=slice(anstartyr,anendyr)))
             else:
-                data[iday,:,:,:] = (FileIn[plotvar].sel(lat=slice(MinLatF,MaxLatF),
-                                                        years=slice(anstartyr,anendyr)))
+                data[iday,:,:,:] = (FileIn[plotvarin].sel
+                                                    (lat=slice(MinLatF-5,MaxLatF+5),
+                                                      years=slice(anstartyr,anendyr)))
 
         except KeyError:    # time is year, not years
-            if switchlats:
-                data[iday,:,:,:] = (FileIn[plotvar][:,::-1,:]
-                                        .sel(lat=slice(MinLatF,MaxLatF),
-                                             year=slice(anstartyr,anendyr)))
-            else:
-                data[iday,:,:,:] = (FileIn[plotvar]
-                                        .sel(lat=slice(MinLatF,MaxLatF),
-                                             year=slice(anstartyr,anendyr)))
+            if yearstr == 0:
+                if switchlats:
+                    data[iday,:,:,:] = (FileIn[plotvarin][:,::-1,:]
+                                            .sel(lat=slice(MinLatF-5,MaxLatF+5),
+                                                 year=slice(anstartyr,anendyr)))
+                else:
+                    data[iday,:,:,:] = (FileIn[plotvarin]
+                                            .sel(lat=slice(MinLatF-5,MaxLatF+5),
+                                                 year=slice(anstartyr,anendyr)))
+            elif yearstr == 1:
+                if switchlats:
+                    data[iday,:,:,:] = (FileIn[plotvarin][:,::-1,:]
+                                            .sel(lat=slice(MinLatF-5,MaxLatF+5),
+                                                 time=slice(str(anstartyr)
+                                                            ,str(anendyr))))
+                else:
+                    data[iday,:,:,:] = (FileIn[plotvarin]
+                                            .sel(lat=slice(MinLatF-5,MaxLatF+5),
+                                                 time=slice(str(anstartyr)
+                                                            ,str(anendyr))))
+    if args.totals == 1:
+        lifetimemin =([-100] + tbound1)
+    else:
+        lifetimemin = tbound1
 
-        # Make time means
-        dataAnnAvg = np.nanmean(data,axis=1)
+    data = xray.DataArray(data,
+                           coords=[('lifetimemin',tbound1),
+                                   ('year',years),
+                                   ('lat',lats),
+                                   ('lon',lons)])
 
-        # Make event lifetime means
-        dataAllAvg = np.nansum(dataAnnAvg,axis=0)
+    # Make time means
+    dataAnnAvg = data.mean(dim='year') #np,nanmean(data,axis=1)
+    # Make event lifetime means
+    dataAllAvg = dataAnnAvg.sum(dim='lifetimemin')
 
-        # Calculate percentages
-        if plotvar == 'TDensity':
-            # get values per square degree
-            dataAllPercent = dataAllAvg  / (difflat * difflon) 
-            dataSum =  np.nansum(dataAllAvg)
-        elif plotvar == "TPrecip":
-            dataAllPercent = 100.0 * np.divide(dataAllAvg,PrecipIn*365.0)  # convert PrecipIn from mm/day to mm/yr before dividing
-            dataSum = 100.0 * np.nansum(dataAllAvg)/np.nansum(PrecipIn * 365.0)
+    # Calculate percentages
+    if plotvarin == 'TDensity':
+        # get values per square degree
+        dataAllPercent = (dataAllAvg /
+                          (difflat * difflon)) 
+        # get total value per year per square degree
+        dataSum = (np.nansum(dataAllAvg.sel(
+                                    lat=slice(MinLatF,MaxLatF)))/
+                          ((MaxLatF - MinLatF) * (MaxLonF - MinLonF))) 
+    elif plotvarin == "TPrecip":
+        # convert PrecipIn from mm/day to mm/yr before dividing
+        dataAllPercent = 100.0 * np.divide(dataAllAvg,
+                                           PrecipIn*365.0)
+        try:
+            dataSum = 100.0*(np.nansum(dataAllAvg.sel(lat=slice(MinLatF,MaxLatF))/
+                        np.nansum(PrecipIn.sel(lat=slice(MinLatF,MaxLatF)) * 365.0)))
+        except KeyError:
+            dataSum = 100.0 * (
+                      np.nansum(dataAllAvg.sel(lat=slice(MinLatF,MaxLatF))/
+                      np.nansum(PrecipIn.sel(latitude=slice(MinLatF,MaxLatF)) *
+                                365.0)))
 
-        dataPercent = np.zeros(dataAnnAvg.shape)
-        titlesdata = []
+    if args.totals == 1:
+        arraynbounds = nbounds + 1
+    else:
+        arraynbounds = nbounds
 
-        # Fill percent arrays: first is total
-        arrayindex = 0
-        if args.totals == 1:
-            dataPercent[0,:,:] = dataAllPercent
+    dataPercent = np.zeros([arraynbounds,nlats,nlons]) 
+    titlesdata = []
 
-            if plotvar == 'TDensity':
-                titlesdata.append('Total annual event density, events/ ' + 
-                                  '(yr/deg~S1~2); mean = ' +
-                                  '{:2.3g}'.format(dataSum))
-                titlemain = 'density'
-            elif plotvar == 'TPrecip':
-                titlesdata.append('Percentage of total precipitation ' + 
-                                  'captured in events; mean = ' +
-                                  '{:2.3g}'.format(dataSum) + '%')
-                titlemain = 'precip'
-            arrayindex += 1
+    # Fill percent arrays: first is total
+    arrayindex = 0
+    if args.totals == 1:
+        dataPercent[0,:,:] = dataAllPercent
+        if dataSum > 100:
+            strtotal = '{:4.3g}'.format(dataSum)
+        elif dataSum > 10:
+            strtotal = '{:2.2g}'.format(dataSum)
+        else:
+            strtotal = '{:2.1g}'.format(dataSum)
 
-        for iday in range(0,nbounds):
-            dataPercent[iday+arrayindex,:,:] = 100.0 * (np.where(dataAllAvg > 0,
-                                                        np.divide(dataAnnAvg[iday,:,:],dataAllAvg),0.0)) 
+        if plotvarin == 'TDensity':
+            titlesdata.append('Density, events/' + 
+                              'yr/deg~S1~2; mean = ' +
+                              strtotal)
+            titlemain = 'density'
+        elif plotvarin == 'TPrecip':
+            titlesdata.append('Precipitation; ' + 
+                              ' mean = ' +
+                              strtotal + '%')
+            titlemain = 'precip'
+        arrayindex += 1
 
-            if tbound2[iday] < tbound1[iday]*10 or tbound1[iday] == 0 or tbound2[iday] == 0:
-                titlesdata.append(str(int(tbound1[iday])) + 
-                                  ' to ' + str(int(tbound2[iday])) + ' ' + unit + 
-                                  ' events; mean = ' +
-                                  '{:2.3g}'.format(np.nanmean(dataPercent[iday+arrayindex,:,:])))
-            else:
-                titlesdata.append('>' + str(int(tbound1[iday])) + ' ' +
-                                  unit + ' events; mean = ' +
-                                  '{:2.3g}'.format(np.nanmean(dataPercent[iday+arrayindex,:,:])))
+    for iday in range(0,nbounds):
+        dataPercent[iday+arrayindex,:,:] = 100.0 * (np.where(dataAllAvg > 0,
+                                                    np.divide(dataAnnAvg[iday,:,:],dataAllAvg),0.0)) 
 
-    return(titlesdata,dataPercent,lats,lons)
+        if np.nanmean(dataPercent[iday+arrayindex,:,:]) > 100:
+            strmean = '{:4.3g}'.format(
+                            np.nanmean(dataPercent[iday+arrayindex,:,:]))
+        elif np.nanmean(dataPercent[iday+arrayindex,:,:]) > 10:
+            strmean = '{:2.2g}'.format(
+                            np.nanmean(dataPercent[iday+arrayindex,:,:]))
+        else:
+            strmean = '{:2.1g}'.format(
+                            np.nanmean(dataPercent[iday+arrayindex,:,:]))
+
+        if (abs(tbound2[iday]) < abs(tbound1[iday]*10) or 
+            abs(tbound1[iday]) < abs(tbound2[iday]*10) or
+            tbound1[iday] == 0 or tbound2[iday] == 0):
+            titlesdata.append(str(int(tbound1[iday])) + 
+                              '-' + str(int(tbound2[iday])) + ' ' + unit + 
+                              '; mean = ' +
+                              strmean + '%')
+        else:
+            titlesdata.append('>' + str(int(tbound1[iday])) + ' ' +
+                              unit + '; mean = ' +
+                              strmean + '%')
+    newDA = xray.DataArray(dataPercent,
+                           coords=[('lifetimemin',lifetimemin),
+                                   ('lat',lats),
+                                   ('lon',lons)])
+    return(titlesdata,newDA)
 
 # Get the data
 
-titlescol1,datacol1,lats,lons = getplotdata(Data1,Version1,
+titlescol1,datacol1 = getplotdata(plotvar1,
+                                  Data1,Version1,
                                   MinLatF,MaxLatF,
                                   anstartyr,anendyr)
 
-titlescol2,datacol2,lats,lons = getplotdata(Data2,Version2,
+titlescol2,datacol2 = getplotdata(plotvar2,
+                                  Data2,Version2,
                                   MinLatF,MaxLatF,
                                   anstartyr,anendyr)
 
 # And now plot 
 # Plot 1: Average density, and percentage easterly
 
-figtitlein = (FigDir + 'Paper_' + plotvar + Data1 + '_' + Version1 + '_' + Data2 +
+figtitlein = (FigDir + 'Paper_' + plotvar1 + '_' + Data1 + '_' + Version1 +
+             '_' + plotvar2 + '_' + Data2 +
              '_' + Version2 + str(anstartyr) + '-' + str(anendyr) + '_' +
               str(tbound1[0]) + '_to_' + str(tbound2[nbounds-1]) + unit +
               fileOadd)
@@ -282,71 +355,35 @@ figtitlein = (FigDir + 'Paper_' + plotvar + Data1 + '_' + Version1 + '_' + Data2
 titlein = ('Events in ' + Data1 + " " + Version1 + '(L) and ' + Data2 + ' ' +
             Version2 + '(R), years ' + str(anstartyr) + '-' + str(anendyr))
 
-if splittype == 'day':
-    if Data1 in ["TRMM"]:
-        clims1,clims2,clims3,clims4 = [0.0,98.0,0.0,0.0,0.0,0.0],[300,100.0,1.0,0.2,0.05,1.0],[0.0,0.0,0.0,0.0,0.0,0.0],[100,90.0,40.0,40.0,40.0,40.0]  
-    elif Data1 in ["TRMMERAIgd"]:
-        if minGB in [4,9]:
-            clims1,clims2,clims3,clims4 = [0.0,70.0,0.0,0.0,0.0,0.0],[6,100.0,20.0,7.0,4.0,3.0],[0.0,0.0,0.0,0.0,0.0,0.0],[100,80.0,50.0,50.0,50.0,50.0]
 
-        else:
-            clims1,clims2,clims3,clims4 = [0.0,90.0,0.0,0.0,0.0,0.0],[10,100.0,15.0,5.0,2.0,3.0],[0.0,0.0,0.0,0.0,0.0,0.0],[100,80.0,40.0,50.0,50.0,50.0]
-    elif Data1 in ["ERAI"]:
-        if minGB in [4,9]:
-            clims1,clims2,clims3,clims4 = [0.0,70.0,0.0,0.0,0.0,0.0],[6,100.0,20.0,7.0,4.0,3.0],[0.0,0.0,0.0,0.0,0.0,0.0],[100,80.0,50.0,50.0,50.0,50.0]
-        else:
-            clims1,clims2,clims3,clims4 = [0.0,90.0,0.0,0.0,0.0,0.0],[10,100.0,15.0,5.0,2.0,3.0],[0.0,0.0,0.0,0.0,0.0,0.0],[100,80.0,40.0,50.0,50.0,50.0]
+cb1,cb2 = getFITcolorbars(Data1,minGB,splittype,plotvar1)
+cb3,cb4 = getFITcolorbars(Data2,minGB,splittype,plotvar2)
 
-#       clims1,clims2,clims3,clims4 = [0.0,95.0,0.0,0.0,0.0,0.0],[30,100.0,2.0,1.5,0.5,3.0],[0.0,0.0,0.0,0.0,0.0,0.0],[100,70.0,30.0,50.0,50.0,50.0]
-    elif Data1 in ["ERA20C"]:
-        clims1,clims2,clims3,clims4 = [0.0,90.0,0.0,0.0,0.0,0.0],[15,100.0,4.0,3.0,2.0,4.0],[0.0,0.0,0.0,0.0,0.0,0.0],[100,70.0,30.0,50.0,50.0,50.0]        
-    elif Data1 in ["CESM"]:
-        clims1,clims2,clims3,clims4 = [0.0,90.0,0.0,0.0,0.0],[50,100.0,5.0,3.0,0.5],[0.0,0.0,0.0,0.0,0.0],[100,90.0,40.0,40.0,40.0]  
-
-elif splittype == 'maxspeed':
-    if Data1 == "TRMM":
-        clims1,clims2,clims3,clims4 = [0.0,0.0,0.0,95.0,0.0,0.0,0.0],[0.5,0.75,5.0,100.0,5.0,0.75,0.5],[0.0,0.0,0.0,20.0,0.0,0.0,0.0],[30,30.0,30.0,100.0,30.0,30.0,30.0]
-    elif Data1 in ["TRMMERAIgd"]:
-        clims1,clims2,clims3,clims4 = [0.0,0.0,0.0,90.0,0.0,0.0,0.0],[0.5,1.0,5.0,100.0,5.0,1.0,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0],[30,30.0,30.0,100.0,30.0,30.0,30.0]
-    elif Data1 in ["ERAI"]:
-        clims1,clims2,clims3,clims4 = [0.0,0.0,0.0,90.0,0.0,0.0,0.0],[0.5,1.0,5.0,100.0,5.0,1.0,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0],[30,30.0,30.0,100.0,30.0,30.0,30.0]
-#               clims1,clims2,clims3,clims4 = [0.0,95.0,0.0,0.0,0.0,0.0],[30,100.0,2.0,1.5,0.5,3.0],[0.0,0.0,0.0,0.0,0.0,0.0],[100,70.0,30.0,50.0,50.0,50.0]
-
-    elif Data1 == "CESM":
-        clims1,clims2,clims3,clims4 = [0.0,90.0,0.0,0.0,0.0],[50,100.0,5.0,3.0,0.5],[0.0,0.0,0.0,0.0,0.0],[20,90.0,40.0,40.0,40.0]
-
-    elif Data1 in ["ERA20C"]:
-        clims1,clims2,clims3,clims4 = [0.0,90.0,0.0,0.0,0.0,0.0],[15,100.0,4.0,3.0,2.0,4.0],[0.0,0.0,0.0,0.0,0.0,0.0],[100,70.0,30.0,50.0,50.0,50.0]
-
-
-if plotvar == 'TDensity':
+if plotvar1 in ['TDensity','TPrecip']:
     datacol1 = conserveRegrid(datacol1,
                                   'lat','lon',
-                                  lats,lons,
                                   sumlats,sumlons)
+
+if plotvar2 in ['TDensity','TPrecip']:
     datacol2 = conserveRegrid(datacol2,
                                   'lat','lon',
-                                  lats,lons,
                                   sumlats,sumlons)
-
+if args.totals == 1:
+    print('plotting totals')
     plotmap(datacol1,datacol2,
-            clims1,clims2,clims1,clims2,
+            cb1,cb2,cb3,cb4,
             titlescol1,titlescol2,
             titlein,figtitlein,
-            lons,lats,
             MinLonF,MaxLonF,MinLatF,MaxLatF,
             FillValue)
-
-elif plotvar == 'TPrecip':
+else:
+    # if not plotting totals, take 1st cb values out of array
     plotmap(datacol1,datacol2,
-            clims3,clims4,clims3,clims4,
+            cb1[1:-1],cb2[1:-1],cb3[1:-1],cb4[1:-1],
             titlescol1,titlescol2,
             titlein,figtitlein,
-            lons,lats,
             MinLonF,MaxLonF,MinLatF,MaxLatF,
             FillValue)
-
-Ngl.end()
 
 
 
