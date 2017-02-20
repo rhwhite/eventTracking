@@ -33,8 +33,9 @@ FigDir = '/home/disk/eos4/rachel/Figures/PrecipEvents/'
 anstartyr = 1999
 anendyr = 2014
 splittype = 'day'
-tbound1 = [0,1,2,5]
-tbound2 = [1,2,5,100]
+tbound1 = [0.0,1.0,2.0,5.0]
+tbound2 = [1.0,2.0,5.0,100.0]
+
 #tbound1 = [1.0, 1.125, 1.5, 1.875]
 #tbound2 = [1.125, 1.25, 1.625, 2.0]
 
@@ -42,6 +43,11 @@ nbounds = len(tbound1)
 if len(tbound2) != nbounds:
     exit("tbound arrays not equal lengths")
 unit = 'day'
+
+if splittype == 'day':
+    diradd = '/Sizes/'
+elif splittype == 'MaxSpeeds':
+    diradd = '/MaxSpeeds/'
 
 sumlats=0
 sumlons=0
@@ -52,7 +58,11 @@ minGB=0
 mapping = 'center'
 
 #minLat = [-45,-10,8,20,15]; maxLat = [-25,10,15,35,30]; minLon = [185,120,150,140,290]; maxLon = [220,160,220,220,340]  #225
-minLat = [-45,-10,8,20,0]; maxLat = [-25,8,18,35,8]; minLon = [180,120,150,140,180]; maxLon = [210,160,240,220,280]
+minLat = [-10,  0, 20,-45]
+maxLat = [8  , 10, 35,-25]
+minLon = [120,220,140,180]
+maxLon = [160,280,220,210]
+
 
 # In[4]:
 
@@ -74,7 +84,8 @@ filePrecipReg2 =  xrayOpen(precipClimDir + precipReg2File)
 fileOlrReg = xrayOpen(olrDir + olrRegFile)
 
 # Events file
-dirIn = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/' + data + '_output/' + version + str(fstartyr) + '/proc/'
+dirIn = ('/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/' + data + '_output/'
+            + version + str(fstartyr) + '/proc/' + diradd)
 
 if minGB > 0:
     fileadd = '_min' + str(minGB) + 'GB'
@@ -153,7 +164,7 @@ plt.subplots_adjust(top=0.9)
 plt.savefig(FigDir + 'PrecipRegression_withboxes.eps',format='eps',dpi=120.,facecolor='w',edgecolor='w')
 
 #plt.show()
-
+print fileOlrReg['olr']
 ## now plot OLR regression
 precipplot(fileOlrReg['olr'],fileOlrReg['olr'].coords['lon'],'Regression of annual mean NOAA interpolated OLR from 1999-2013',1,1)
 plt.savefig(FigDir + 'OlrRegression_withboxes.eps',format='eps',dpi=120.,facecolor='w',edgecolor='w')
@@ -377,21 +388,6 @@ def plotarea(area):
 
 # In[ ]:
 
-tbound1 = [1.0, 1.125, 1.5, 1.875]
-tbound2 = [1.125, 1.25, 1.625, 2.0]
-
-#plotarea(0)
-
-
-# ***
-# 
-# ## Area 2
-
-# In[ ]:
-
-tbound1 = [1.0, 1.125, 1.5, 1.875]
-tbound2 = [1.125, 1.25, 1.625, 2.0]
-
 #plotarea(1)
 
 
@@ -400,9 +396,6 @@ tbound2 = [1.125, 1.25, 1.625, 2.0]
 # 
 
 # In[ ]:
-
-tbound1 = [1.0, 1.125, 1.5, 1.875]
-tbound2 = [1.125, 1.25, 1.625, 2.0]
 
 #plotarea(2)
 
@@ -416,8 +409,6 @@ tbound2 = [1.125, 1.25, 1.625, 2.0]
 # In[ ]:
 
 # 
-tbound1 = [0,1,2,5]
-tbound2 = [1,2,5,100]
 for area in range(0,len(minLat)):
 	plotlin_accum(tbound1,tbound2,'TPrecip',minLon,maxLon,minLat,maxLat,'Precip frac, ','FractionTime_Areas.eps',2,'fraction')
 
