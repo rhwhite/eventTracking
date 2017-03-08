@@ -118,7 +118,6 @@ def geteventprecip(indicesin, tmin, tmax, TPrecip):
     for ibound in range(0,nbounds):
         data_mask = np.ma.array(eventschunk[:,0,:,:], mask=(np.in1d(eventschunk[:,0,:,:],indicesin[ibound]).reshape(eventschunk[:,0,:,:].shape)))
         TPrecip[ibound,:, :] += np.nansum(data_mask.mask * precipchunk,axis=0)   
-
     return(TPrecip)
 
 def runchunk(nchunks,fromevent,toevent,TPrecip):
@@ -310,13 +309,15 @@ else:
     maxlat = np.amax(lats)
 
 # Define which variables to print out, and which to initialize (all possible)
-nonprecipvars = np.array(['ExmaxSpeed','WxmaxSpeed','EDensity','WDensity','SDensity','TDensity','ESize','WSize','SSize','YSpan'])
+nonprecipvars = np.array(['ExmaxSpeed','WxmaxSpeed','EDensity','WDensity','SDensity','TDensity','ESize','WSize','SSize'])
 
 precipvars = np.array(['TPrecip'])
 
 allvars = np.concatenate((nonprecipvars,precipvars),axis=0)
 extravars = np.array(['lon','lat','time'])
-initvars = ['TPrecip', 'EPrecip', 'WPrecip', 'SPrecip', 'EDensity', 'WDensity','SDensity', 'TDensity', 'ExmaxSpeed', 'WxmaxSpeed', 'EDistance', 'WDistance', 'SDistance', 'ESize', 'WSize', 'SSize','YSpan']
+initvars = (['TPrecip', 'EPrecip', 'WPrecip', 'SPrecip', 'EDensity',
+'WDensity','SDensity', 'TDensity', 'ExmaxSpeed', 'WxmaxSpeed', 'EDistance',
+'WDistance', 'SDistance', 'ESize', 'WSize', 'SSize'])
 
 nvars = len(allvars)
 nXvars = len(extravars)
@@ -336,20 +337,15 @@ lons2 = []
 
 for ibound in range(0,nbounds):
     FileI1 = getPrecipfilename(mapping, Data, Version, startyr, endyr, ibound, splittype, unit, speedtspan, minGB, tbound1, tbound2)    
-    print FileI1
 
     FileO = getdenfilename(mapping, Data, Version, startyr, endyr, ibound, splittype, unit, speedtspan, minGB, tbound1, tbound2, 'Mon',-1,-1)
 
     if test != 0:
         FileO = test + FileO
 
-    #'DenDirSpd_Map_Mon_' + fileadd + tboundtitle + unit + '_' + mapping + '_' + Data + "_" + str(startyr) + '-' + str(endyr) + '_' + Version + fileaddGB + fileaddmap + '.nc'
-    #FileO = 'testDenDirSpd_Map_Mon_' + fileadd + tboundtitle + unit + '_' + mapping + '_' + Data + "_" + str(startyr) + '-' + str(endyr) + '_' + Version + fileaddGB + fileaddmap + '.nc'
-
     # Create new datasets
 
-    print DirO + FileO
-    writeFiles.append(Dataset(DirO + FileO, 'w'))
+    writeFiles.append(Dataset(FileO, 'w'))
     writeFiles[ibound].createDimension('time', ntotal)
     writeFiles[ibound].createDimension('lon', nlons)
     writeFiles[ibound].createDimension('lat', nlats)
@@ -477,13 +473,13 @@ for itime in range(0, nlooptimes):
         if mapping == 'genesis':
             ys = datain[ibound]['ycenterstart'].values
             xs = datain[ibound]['xcenterstart'].values
-        elif mapping == 'center':
-            ys = datain[ibound]['ycentermean'].values
-            xs = datain[ibound]['xcentermean'].values
         elif mapping == 'end':
             ys = datain[ibound]['ycenterend'].values
             xs = datain[ibound]['xcenterend'].values
-        
+        elif mapping == 'center':
+            ys = datain[ibound]['ycentermean'].values
+            xs = datain[ibound]['xcentermean'].values
+ 
         gridboxspan = datain[ibound]['gridboxspan'].values
         xmaxspeed_4ts = datain[ibound]['xmaxspeed_4ts'].values
         yspans = abs(datain[ibound]['ycenterend'].values - datain[ibound]['ycenterstart'].values)
@@ -493,7 +489,6 @@ for itime in range(0, nlooptimes):
 
                 yidx = int(round(ys[ievent]))
                 xidx = int(round(xs[ievent]))
-                YSpan[yidx,xidx] += yspans[ievent]
 
                 if lons2[ibound][ievent] > lons1[ibound][ievent]:  # If end lon > start lon it's moving to the east,  i.e. it's Westerly
                     WDensity[yidx, xidx] += 1
