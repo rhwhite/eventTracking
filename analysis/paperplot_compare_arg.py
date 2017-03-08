@@ -119,7 +119,7 @@ if sumlons > 0:
 # Define functions
 
 def getplotdata(plotvarin,Datain,Versionin,
-            MinLatF,MaxLatF,
+            MinLatF,MaxLatF,MinLonF,MaxLonF,
             anstartyrin,anendyrin):
 
     # make assumptions on file start years
@@ -140,43 +140,46 @@ def getplotdata(plotvarin,Datain,Versionin,
     # get data to plot 
     iday = 0
 
-    DirIn = (base + '/FiT_RW_ERA/' + Datain + '_output/' + Versionin +
-                 str(Fstartyrin) + '/proc/')
+    FileIn = getdenfilename(mapping, Datain, Versionin, Fstartyrin, Fendyrin,iday,
+                 splittype, unit, 4, minGB, tbound1, tbound2,
+                 'Mon',-1,-1)
 
-    FileIn = ('DenDirSpd_Map_Ann_' + splitname + '_' + str(tbound1[iday]) + '-' +
-                str(tbound2[iday]) + unit + '_' + mapping + '_' + Datain + '_' + 
-                str(Fstartyrin) + '-' + str(Fendyrin) + '_' + Versionin + fileadd +  '.nc')
 
-    if splittype == "maxspeed":
-        diradd = "MaxSpeeds"
-    elif splittype == "speed":
-        diradd = "Speeds"
-    elif splittype == "day":
-        diradd = "Sizes"
-    else:
-        exit("unexpected splittype")
+    # Use MinLonF and MaxLonF to capture all possible longitudes
+    # And then work out which to use
+    VarIn = geteventmapdata(iday,'Ann','TDensity',FileIn,
+                    1998, 2014,
+                    MinLatF-5,MaxLatF+5,-180,360,[])
 
-    FileIn = xrayOpen(DirIn + '/' + diradd + '/' + FileIn)
+    # Deal with different possible longitudes: 0 to 360 or -180 to 180
+    if VarIn.lon[0] < 0 and VarIn.lon[-1] <= 180:
+        if MaxLonF > 180:
+            MaxLonF = MaxLonF - 180
+            MinLonF = MinLonF - 180
+
+    VarIn = geteventmapdata(iday,'Ann','TDensity',FileIn,
+                    1998, 2014,
+                    MinLatF-5,MaxLatF+5,-180,360,[])
 
     # Always read in file to go from South to North
     # Add 5 lats in either direction for regridded averages
-    if FileIn['lat'][0] > FileIn['lat'][1]:
+    if VarIn.lat[0] > VarIn.lat[1]:
         switchlats = True
-        lats = FileIn['lat'][::-1].sel(lat=slice(MinLatF-5,MaxLatF+5)).values
+        lats = VarIn.lat[::-1].values
     else:
         switchlats = False
-        lats = FileIn['lat'].sel(lat=slice(MinLatF-5,MaxLatF+5)).values
+        lats = VarIn.lat.values
 
-    lons = FileIn['lon'].values
+    lons = VarIn['lon'].values
 
     yearstr = 0
     try:
-        years = FileIn['years'].sel(years=slice(anstartyr,anendyr)).values
+        years = VarIn['years'].sel(years=slice(anstartyr,anendyr)).values
     except KeyError:    # years is called year
         try:
-            years = FileIn['year'].sel(year=slice(anstartyr,anendyr)).values
+            years = VarIn['year'].sel(year=slice(anstartyr,anendyr)).values
         except KeyError:    # time is 'time'
-            years = FileIn['time'].sel(time=slice(
+            years = VarIn['time'].sel(time=slice(
                                         str(anstartyr),str(anendyr)))
             yearstr = 1
 
@@ -191,46 +194,24 @@ def getplotdata(plotvarin,Datain,Versionin,
 
     # read in data for each category.
     for iday in range(0,nbounds):
-        FileIn = ('DenDirSpd_Map_Ann_' + splitname + '_' + str(tbound1[iday]) + '-'
-                    + str(tbound2[iday]) + unit + '_' + mapping + '_' + Datain + '_'
-                    + str(Fstartyrin) + '-' + str(Fendyrin) + '_' + Versionin + fileadd
-                    + '.nc')
 
-        #Get lons and lats
-        FileIn = xrayOpen(DirIn + '/' + diradd + '/' + FileIn)
+        FileIn = getdenfilename(mapping, Datain, Versionin, 
+                                Fstartyrin, Fendyrin,iday,
+                                splittype, unit, 4, minGB, 
+                                tbound1, tbound2,
+                                'Mon',-1,-1)
 
         # Adding +/- 5 lats for regridding purposes
-        try:
-            if switchlats:
-                data[iday,:,:,:] = (FileIn[plotvarin][:,::-1,:]
-                                        .sel(lat=slice(MinLatF-5,MaxLatF+5),
-                                             years=slice(anstartyr,anendyr)))
-            else:
-                data[iday,:,:,:] = (FileIn[plotvarin].sel
-                                                    (lat=slice(MinLatF-5,MaxLatF+5),
-                                                      years=slice(anstartyr,anendyr)))
+        VarIn = geteventmapdata(iday,'Ann',plotvarin,FileIn,
+                    anstartyr, anendyr,
+                    MinLatF-5,MaxLatF+5,MinLonF,MaxLonF,
+                    [])
 
-        except KeyError:    # time is year, not years
-            if yearstr == 0:
-                if switchlats:
-                    data[iday,:,:,:] = (FileIn[plotvarin][:,::-1,:]
-                                            .sel(lat=slice(MinLatF-5,MaxLatF+5),
-                                                 year=slice(anstartyr,anendyr)))
-                else:
-                    data[iday,:,:,:] = (FileIn[plotvarin]
-                                            .sel(lat=slice(MinLatF-5,MaxLatF+5),
-                                                 year=slice(anstartyr,anendyr)))
-            elif yearstr == 1:
-                if switchlats:
-                    data[iday,:,:,:] = (FileIn[plotvarin][:,::-1,:]
-                                            .sel(lat=slice(MinLatF-5,MaxLatF+5),
-                                                 time=slice(str(anstartyr)
-                                                            ,str(anendyr))))
-                else:
-                    data[iday,:,:,:] = (FileIn[plotvarin]
-                                            .sel(lat=slice(MinLatF-5,MaxLatF+5),
-                                                 time=slice(str(anstartyr)
-                                                            ,str(anendyr))))
+        if switchlats:
+            data[iday,:,:,:] = (VarIn[:,::-1,:].values)
+        else:
+            data[iday,:,:,:] = (VarIn.values)
+
     if args.totals == 1:
         lifetimemin =([-100] + tbound1)
     else:
@@ -268,7 +249,10 @@ def getplotdata(plotvarin,Datain,Versionin,
                       np.nansum(dataAllAvg.sel(lat=slice(MinLatF,MaxLatF))/
                       np.nansum(PrecipIn.sel(latitude=slice(MinLatF,MaxLatF)) *
                                 365.0)))
-
+    elif plotvarin == 'LocalDensity':
+        dataAllPercent = dataAllAvg
+        dataSum = (np.nansum(dataAllAvg.sel(
+                                    lat=slice(MinLatF,MaxLatF))))
     if args.totals == 1:
         arraynbounds = nbounds + 1
     else:
@@ -298,6 +282,8 @@ def getplotdata(plotvarin,Datain,Versionin,
                               ' mean = ' +
                               strtotal + '%')
             titlemain = 'precip'
+        elif plotvarin == 'LocalDensity':
+            titlesdata.append('Density, events/yr')
         arrayindex += 1
 
     for iday in range(0,nbounds):
@@ -311,20 +297,22 @@ def getplotdata(plotvarin,Datain,Versionin,
             strmean = '{:2.2g}'.format(
                             np.nanmean(dataPercent[iday+arrayindex,:,:]))
         else:
-            strmean = '{:2.1g}'.format(
+            strmean = '{:2.2g}'.format(
                             np.nanmean(dataPercent[iday+arrayindex,:,:]))
 
         if (abs(tbound2[iday]) < abs(tbound1[iday]*10) or 
             abs(tbound1[iday]) < abs(tbound2[iday]*10) or
             tbound1[iday] == 0 or tbound2[iday] == 0):
-            titlesdata.append(str(int(tbound1[iday])) + 
-                              '-' + str(int(tbound2[iday])) + ' ' + unit + 
-                              '; mean = ' +
-                              strmean + '%')
+            titlesdata.append('')
+                              #str(int(tbound1[iday])) + 
+                              #'-' + str(int(tbound2[iday])) + ' ' + unit + 
+                              #'; mean = ' +
+                              #strmean + '%')
         else:
-            titlesdata.append('>' + str(int(tbound1[iday])) + ' ' +
-                              unit + '; mean = ' +
-                              strmean + '%')
+            titlesdata.append('')
+                              #'>' + str(int(tbound1[iday])) + ' ' +
+                              #unit + '; mean = ' +
+                              #strmean + '%')
     newDA = xray.DataArray(dataPercent,
                            coords=[('lifetimemin',lifetimemin),
                                    ('lat',lats),
@@ -336,11 +324,13 @@ def getplotdata(plotvarin,Datain,Versionin,
 titlescol1,datacol1 = getplotdata(plotvar1,
                                   Data1,Version1,
                                   MinLatF,MaxLatF,
+                                  MinLonF,MaxLonF,
                                   anstartyr,anendyr)
 
 titlescol2,datacol2 = getplotdata(plotvar2,
                                   Data2,Version2,
                                   MinLatF,MaxLatF,
+                                  MinLonF,MaxLonF,
                                   anstartyr,anendyr)
 
 # And now plot 
@@ -359,12 +349,12 @@ titlein = ('Events in ' + Data1 + " " + Version1 + '(L) and ' + Data2 + ' ' +
 cb1,cb2 = getFITcolorbars(Data1,minGB,splittype,plotvar1)
 cb3,cb4 = getFITcolorbars(Data2,minGB,splittype,plotvar2)
 
-if plotvar1 in ['TDensity','TPrecip']:
+if plotvar1 in ['LocalDensity','TDensity','TPrecip'] and sumlats > 0:
     datacol1 = conserveRegrid(datacol1,
                                   'lat','lon',
                                   sumlats,sumlons)
 
-if plotvar2 in ['TDensity','TPrecip']:
+if plotvar2 in ['LocalDensity','TDensity','TPrecip'] and sumlats > 0:
     datacol2 = conserveRegrid(datacol2,
                                   'lat','lon',
                                   sumlats,sumlons)
