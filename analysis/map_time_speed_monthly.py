@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 """
+Code to create maps containing average characteristics of events for each
+gridbox on a monthly resolution.
+
+Author: Rachel H White rhwhite@uw.edu
+Created: Jan 2016
 
 """
 import os
