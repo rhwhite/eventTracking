@@ -1,5 +1,11 @@
 # coding: utf-8
-
+"""
+Example use:
+python CalculateDomainTotalAverages.py --Data TRMM --Version Standard \
+--anstartyr 1998 --anendyr 2014 \
+--tbound1 0 1 2 5 --tbound2 1 2 5 100 --splittype day \
+--unit day --minlat -40 --maxlat 40
+"""
 # In[1]:
 
 import os, errno
@@ -40,11 +46,14 @@ parser.add_argument('--anstartyr',type=int,nargs=1,
                     help='start year for analysis')
 parser.add_argument('--anendyr',type=int,nargs=1,help='end year for analysis')
 parser.add_argument('--test',type=int,nargs='?',default=0,help='1 for test')
-
+parser.add_argument('--extra',type=int,nargs='?',default=0,help='1 for test')
+parser.add_argument('--tperday',type=int,nargs='?',default=8,help=
+        'timesteps per day, default is 3hourly = 8')
 
 args = parser.parse_args()
 
-print args
+print(str(args))
+print(str(dt.date.today()))
 
 # put inputs into the type and variable names we want
 splittype = args.splittype[0]
@@ -55,13 +64,14 @@ tbound2 = np.multiply(args.tbound2,24.0)
 unit = args.unit[0]
 Data = args.Data[0]
 Version = args.Version[0]
-startyr = args.anstartyr[0]
-endyr = args.anendyr[0]
+anstartyr = args.anstartyr[0]
+anendyr = args.anendyr[0]
 minlon = args.minlon
 maxlon = args.maxlon
 minlat = args.minlat
 maxlat = args.maxlat
 test = args.test
+extra = args.extra
 
 diradd = getdirectory(splittype)
 nbounds = len(tbound1)
@@ -70,35 +80,32 @@ print(tbound1)
 
 R = 6371000     # radius of Earth in m
 
-nyears = endyr - startyr + 1
+nyears = anendyr - anstartyr + 1
 
 minevent = 100000
 
-DirI = ('/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/' + Data + '_output/' +
-        Version + str(startyr) + '/proc/')
-
-
 if Data == "TRMM":
-    if Version == '6th_from6' or Version == '5th_from48':
-        DirI = ('/home/disk/eos4/rachel/EventTracking/FiT_RW/TRMM_output/' +
-                Version + '/proc/')
     FileInLats = ('/home/disk/eos4/rachel/Obs/TRMM/'
                     'SeasAnn_TRMM_1998-2014_3B42_3hrly_nonan.nc')
+    Fstartyr = 1998
+    Fendyr = 2014
+
 elif Data == "TRMMERAIgd":
     FileInLats = ('/home/disk/eos4/rachel/Obs/TRMM/'
                     'regrid2ERAI_TRMM_3B42_1998-2014.nc')
+    Fstartyr = 1998
+    Fendyr = 2014
 
 elif Data == "ERAI":
     FileInLats = ('/home/disk/eos4/rachel/Obs/ERAI/Precip_3hrly/'
-                'SeasAnn_ERAI_Totalprecip_' +
-                str(startyr) + '-' + str(endyr) + '_preprocess.nc')
+                'SeasAnn_ERAI_Totalprecip_1980-2014_preprocess.nc')
+    Fstartyr = 1980
+    Fendyr = 2014
 
 elif Data == "ERA20C":
     FileInLats = '/home/disk/eos4/rachel/Obs/ERA_20C/ERA_20C_LatLon.nc'
 
 elif Data == "CESM":
-    DirI = ('/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/CESM_output/' +
-            Version + str(startyr) + '/proc/')
     FileInLats = ('/home/disk/eos4/rachel/EventTracking/Inputs/CESM/'
                     'f.e13.FAMPIC5.ne120_ne120.1979_2012.001/'
                     'f.e13.FAMIPC5.ne120_ne120_TotalPrecip_1979-2012.nc')
@@ -106,8 +113,26 @@ else:
     print("unexpected data type")
     exit()
 
+DirI = ('/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/' + Data + '_output/'
+            + Version + str(Fstartyr) + '/proc/')
+
 DirO = DirI + diradd + '/'
 
+# Work out how many to skip at beginning and end of file
+filedate = dt.date(Fstartyr,1,1)
+startdate = dt.date(anstartyr,1,1)
+enddate = dt.date(anendyr+1,1,1)
+
+if Fstartyr == anstartyr:
+    starttstart = 0
+elif Fstartyr > anstartyr:
+    print("Fstartyr is ", Fstartyr, " and anstartyr is ",anstartyr)
+    exit("cannot start analysing data before there is data!")
+elif Fstartyr < anstartyr:
+    diffdays = (startdate-filedate).days
+    starttstart = diffdays * args.tperday
+
+endtstart = starttstart + (enddate - startdate).days * args.tperday
 
 # In[4]:
 
@@ -128,55 +153,51 @@ nlats = len(lats)
 nlons = len(lons)
 
 # initialize data
-averageydist = np.zeros([nbounds,2],float)
-averagexdist = np.zeros([nbounds,2],float)
-averageprecipperhr = np.zeros([nbounds,2],float)
-averageprecipperareahr = np.zeros([nbounds,2],float)
-averagetime = np.zeros([nbounds,2],float)
-averagegridboxes = np.zeros([nbounds,2],float)
+averageydist = np.zeros([nbounds],float)
+averagexdist = np.zeros([nbounds],float)
+averageprecipperhr = np.zeros([nbounds],float)
+averageprecipperareahr = np.zeros([nbounds],float)
+averagetime = np.zeros([nbounds],float)
+averagem2 = np.zeros([nbounds],float)
+averagegridboxes = np.zeros([nbounds],float)
+precipvolume = np.zeros([nbounds],float)
 
-count = np.zeros([nbounds,2],int)
+count = np.zeros([nbounds],int)
 
 
 # In[5]:
 
 # open main dataset and read in data
-FileI1 = ('All_Precip_' + str(startyr) + '-' + str(endyr) + '_' + Data + '_' +
+FileI1 = ('All_Precip_' + str(Fstartyr) + '-' + str(Fendyr) + '_' + Data + '_' +
             Version + '.nc')
 
 datain = xrayOpen(DirI + FileI1,decodetimes=False)
 
 nevents = len(datain.events)
 
-timespan = datain.timespan[0:nevents].values
 ycenterstart = datain.ycenterstart[0:nevents].values
-ycenterend = datain.ycenterend[0:nevents].values
 xcenterstart = datain.xcenterstart[0:nevents].values
+
+ycenterend = datain.ycenterend[0:nevents].values
 xcenterend = datain.xcenterend[0:nevents].values
+
 
 ycentermean = datain.ycentermean[0:nevents].values
 xcentermean = datain.xcentermean[0:nevents].values
 
+
+tstart = datain.tstart[0:nevents].values
 timespan = datain.timespan[0:nevents].values
 totalprecip = datain.totalprecip[0:nevents].values
+totalprecipSA = datain.totalprecipSA[0:nevents].values
 gridboxspan = datain.gridboxspan[0:nevents].values
-
-startlats = lats[datain.ycenterstart[0:nevents].astype(int)]
-endlats = lats[datain.ycenterend[0:nevents].astype(int)]
-
+gridboxspanSA = datain.gridboxspanSA[0:nevents].values
 
 # In[6]:
 
 # Set fileminlat and filemaxlat if we ran FiT on a subsection of the data
 fileminlat = -90
 filemaxlat = 90
-
-# Need to get a land-sea mask at correct resolution
-LandSeaMask = '/home/disk/eos4/rachel/Obs/TRMM/TMPA_land_sea_mask.nc'
-
-LandSeaFile = xray.open_dataset(LandSeaMask)
-LandSea = LandSeaFile['landseamask'].sel(lat=slice(fileminlat,filemaxlat))
-
 
 # In[ ]:
 
@@ -208,87 +229,124 @@ else:
 for ievent in range(0,nevents):
     if (ievent % 100000 == 0):
         print "ievent: " + str(ievent)
-    # check if in region
-    if isinregion(lats[ycenterstart[ievent]],
-                  lons[xcenterstart[ievent]]):
+    # check is in timeframe of analysis
+    # assuming that tstart = 0 is equal to Fstartyr
 
-        if isinregion(lats[ycenterend[ievent]],
-                      lons[xcenterend[ievent]]):
+    if tstart[ievent] >= starttstart and tstart[ievent] <= endtstart: 
 
-            if LandSea[ycentermean[ievent].astype(int),xcentermean[ievent].astype(int)] > 50:
-                LSindex = 0
-            else:
-                LSindex = 1
-            for ibound in range(0,nbounds):
-                if timespan[ievent] < tbound2[ibound]:
-                    averageydist[ibound,LSindex] += (lats[ycenterend[ievent]] -
-                                            lats[ycenterstart[ievent]])
-                    averagexdist[ibound,LSindex] += (lons[xcenterend[ievent]] -
-                                            lons[xcenterstart[ievent]])
-                    # if negative then that's fine for NH, positive is fine
-                    # for southern hemisphere, so get the average event
-                    # distance travelled
+        # check if in region
+        if isinregion(lats[ycenterstart[ievent]],
+                      lons[xcenterstart[ievent]]):
 
-                    averagetime[ibound,LSindex] += timespan[ievent]
-                    averageprecipperhr[ibound,LSindex] += (
-                                                    totalprecip[ievent]/timespan[ievent])
-                    # Include factor of 3 to convert to hours, not timesteps
-                    averageprecipperareahr[ibound,LSindex] += (
-                                                        totalprecip[ievent]/(3.0 *
-                                                        gridboxspan[ievent]))
-                    averagegridboxes[ibound,LSindex] += gridboxspan[ievent]
-                    count[ibound,LSindex] += 1
-                    break
+            if isinregion(lats[ycenterend[ievent]],
+                          lons[xcenterend[ievent]]):
+
+                for ibound in range(0,nbounds):
+                    if timespan[ievent] < tbound2[ibound]:
+                        if extra == 1:
+                            averageydist[ibound] += (lats[ycenterend[ievent]] -
+                                                    lats[ycenterstart[ievent]])
+                            averagexdist[ibound] += (lons[xcenterend[ievent]] -
+                                                    lons[xcenterstart[ievent]])
+                        # if negative then that's fine for NH, positive is fine
+                        # for southern hemisphere, so get the average event
+                        # distance travelled
+
+                        averagetime[ibound] += timespan[ievent]
+                        averageprecipperhr[ibound] += (
+                                                        totalprecip[ievent]/timespan[ievent])
+                        # Include factor of 3 to convert to hours, not timesteps
+                        averageprecipperareahr[ibound] += (
+                                                            totalprecip[ievent]/(3.0 *
+                                                            gridboxspan[ievent]))
+                        # Include factor of 3 because timespan is in hours, not timesteps
+                        averagem2[ibound] += ( gridboxspanSA[ievent] * 3.0 /
+                                                      timespan[ievent])
+                        # Include factor of 3 because timespan is in hours, not
+                        # timesteps
+                        averagegridboxes[ibound] += ( gridboxspan[ievent] * 3.0 /
+                                                        timespan[ievent])
+                        precipvolume[ibound] += totalprecipSA[ievent]
+                        count[ibound] += 1
+                        break
 
 
 # In[ ]:
-
-averageydist = averageydist / count
-averagexdist = averagexdist / count
+if extra == 1:
+    averageydist = averageydist / count
+    averagexdist = averagexdist / count
 
 averagetime = averagetime / count
 averageprecipperhr = averageprecipperhr / count
 averageprecipperareahr = averageprecipperareahr / count
+averagem2 = averagem2/count
 averagegridboxes = averagegridboxes/count
 
+# convert from m2 to km2
+averagekm2 = averagem2 / (1000.0 * 1000.0)
 
 # In[ ]:
 
 # Write out to a text file
 
-for LSindex in range(0,2):
-    if LSindex == 0:
-        filename = (filenameadd + 'SeaAverages_' + '{:d}'.format(minlat) + 'N-' +
+filename = (filenameadd + 'Averages_' + '{:d}'.format(minlat) + 'N-' +
                     '{:d}'.format(maxlat) + 'N.txt')
-    elif LSindex == 1:
-        filename = (filenameadd + 'LandAverages_' + '{:d}'.format(minlat) + 'N-' +
-                    '{:d}'.format(maxlat) + 'N.txt')
-    with open(DirI + filename, 'w') as text_file:
-        text_file.write('Domain averages for ' + '{:d}'.format(minlat) + 'N-' +
-                '{:d}'.format(maxlat) + 'N and ' + '{:d}'.format(minlon) + 'E-'
-                + '{:d}'.format(maxlon) + 'E \n')
-        text_file.write('timespan (hours), count (# of events), average '
-                        'latitude distance (degs), average longitude distance ' 
-                        '(degrees) averagepreciphr (mm/hr), averagepreciphr ' 
-                        '(mm/gridbox/hr) \n')
+with open(DirI + filename, 'w') as text_file:
+    text_file.write('Domain averages for ' + '{:d}'.format(minlat) + 'N-' +
+            '{:d}'.format(maxlat) + 'N and ' + '{:d}'.format(minlon) + 'E-'
+            + '{:d}'.format(maxlon) + 'E \n')
+    text_file.write('Created by CalculateDomainTotalAverages.py on ' +
+                            str(dt.date.today()) + '\n')
+    text_file.write('Input Arguments: \n') 
+    text_file.write(str(args) + '\n')
+
+    if extra == 1:
+        text_file.write('timespan (hours), \t count (events/yr), \t average '
+                    'latitude distance (degs), \t average longitude distance ' 
+                    '(degrees) \t averagepreciphr (mm/hr), \t averagepreciphr ' 
+                    '(mm/gridbox/hr) \t total precip (m3 /yr) \n')
         for ibound in range(0,nbounds):
             text_file.write('{:.1f}'.format(tbound1[ibound]) + '-' +
-                            '{:.1f}'.format(tbound2[ibound]) + ' hours,   ' +
-                            '{:.2e}'.format(count[ibound,LSindex]) +
-                            ' events,    ' +
-                            '{:.2f}'.format(averageydist[ibound,LSindex]) +
-                            'degrees,    ' +
-                            '{:.2f}'.format(averagexdist[ibound,LSindex]) +
-                            'degrees,    ' +
-                            '{:.2f}'.format(averagetime[ibound,LSindex]) +
-                            'hours,      ' +
-                            '{:.2e}'.format(averagegridboxes[ibound,LSindex]) +
-                            'gridboxes   ' +
-                            '{:.2e}'.format(averageprecipperhr[ibound,LSindex]) +
-                            ' m/hr,      ' +
-                            '{:.2e}'.format(averageprecipperareahr[ibound,LSindex])
-                            + 'm/hr/gridbox \n')
-
+                        '{:.1f}'.format(tbound2[ibound]) + 'hours,   ' +
+                        '{:.2e}'.format(count[ibound]/nyears) +
+                        '; ' +
+                        '{:.2f}'.format(averageydist[ibound]) +
+                        '; ' +
+                        '{:.2f}'.format(averagexdist[ibound]) +
+                        '; ' +
+                        '{:.2f}'.format(averagetime[ibound]) +
+                        ';  ' +
+                        '{:.2e}'.format(averagekm2[ibound]) +
+                        '; ' +
+                        '{:.2e}'.format(averageprecipperhr[ibound]) +
+                        ';  ' +
+                        '{:.2e}'.format(averageprecipperareahr[ibound])
+                        + ';  ' +
+                        '{:.2e}'.format(precipvolume[ibound]/nyears)
+                        + ' \n')
+    else:
+        text_file.write('timespan (hours), \t count (events/yr), \t average '
+                    'time, \t average footprint (km2) '
+                    '\t average footprint (gridboxes) '
+                    '\t averagepreciphr (gridboxes mm/hr), \taveragepreciphr '
+                    '(mm/hr) \t total precip (m3 /yr) \n')
+        for ibound in range(0,nbounds):
+            text_file.write('{:.1f}'.format(tbound1[ibound]) + '-' +
+                        '{:.1f}'.format(tbound2[ibound]) + 'hours; \t' +
+                        '{:.2e}'.format(count[ibound]/nyears) +
+                        '; \t' +
+                        '{:.2f}'.format(averagetime[ibound]) +
+                        '; \t' +
+                        '{:.2e}'.format(averagekm2[ibound]) +
+                        '; \t' +
+                        '{:.2e}'.format(averagegridboxes[ibound]) +
+                        '; \t' +
+                        '{:.2e}'.format(averageprecipperhr[ibound]) +
+                        '; \t' +
+                        '{:.2e}'.format(averageprecipperareahr[ibound])
+                        + '; \t ' +
+                        '{:.2e}'.format(precipvolume[ibound]/nyears)
+                        + ' \n')
 
 
 
