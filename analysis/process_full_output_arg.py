@@ -136,7 +136,7 @@ File1 = 'ts_' + Data +  str(startyr) + '-' + str(endyr) + '_' + Version + '_4Dob
 TxtFileIn = Data + str(startyr) + '-' + str(endyr) + '_' + Version + '_4Dobject_tree.txt'
 
 DirO = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/' + Data + '_output/' + Version + str(startyr) + '/proc/'
-FileO = 'All_Precip_Sizes_' + str(startyr) + '-' + str(endyr) + '_' + Data + '_' + Version + '.nc'
+FileO = 'All_Precip_' + str(startyr) + '-' + str(endyr) + '_' + Data + '_' + Version + '.nc'
 
 # If output directory doesn't exist, create it!
 if not os.path.exists(DirO):
@@ -380,6 +380,10 @@ print "nevents here:", nevents
 ncfile = Dataset(DirO + FileO, 'w')
 ncfile.createDimension('events', nevents)
 
+today = dt.today()
+ncfile.history=('Created using process_full_output_arg.py on ' +
+            today.strftime('%d/%m/%y')  + 'with inputs: ' + Data +
+            '; ' + Version + '; ' + str(startyr) + '-' + str(endyr))
 varlistin = []
 
 newvar = 'xmaxspeed_' + str(speedtspan) + 'ts'
