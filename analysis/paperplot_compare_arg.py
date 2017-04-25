@@ -3,10 +3,10 @@
 Created on Wed Aug 12 17:45:25 2015
 Code to plot figures of precipitation events density and total rainfall using command line arguments
 Example use:
-python paperplot_compare_arg.py --Data1 TRMMERAIgd --Version1 Standard
---anstartyr 1998 --anendyr 2014 --Data2 ERAI --Version2 Standard
- --tbound1 0 1 2 5 --tbound2 1 2 5 100 --unit day --splittype day --minlat -40
- --maxlat 40 --sumlons 3 --sumlats 3 --minGB 9 --plotvar1 TPrecip --plotvar2
+python paperplot_compare_arg.py --Data1 TRMMERAIgd --Version1 Standard \
+--anstartyr 1998 --anendyr 2014 --Data2 ERAI --Version2 Standard \
+--tbound1 0 1 2 5 --tbound2 1 2 5 100 --unit day --splittype day --minlat -40 \
+ --maxlat 40 --sumlons 3 --sumlats 3 --minGB 9 --plotvar1 TPrecip --plotvar2 \
  TPrecip
 @author: rachel
 """
@@ -260,6 +260,8 @@ def getplotdata(plotvarin,Datain,Versionin,
 
     dataPercent = np.zeros([arraynbounds,nlats,nlons]) 
     titlesdata = []
+    paneltitles = []
+    labeltitles = []
 
     # Fill percent arrays: first is total
     arrayindex = 0
@@ -273,18 +275,29 @@ def getplotdata(plotvarin,Datain,Versionin,
             strtotal = '{:2.1g}'.format(dataSum)
 
         if plotvarin == 'TDensity':
-            titlesdata.append('Density, events/' + 
-                              'yr/deg~S1~2; mean = ' +
-                              strtotal)
+            titlesdata.append('')
+            labeltitles.append('events/yr/deg~S1~2')
+            #titlesdata.append('Density, events/' + 
+            #                  'yr/deg~S1~2; mean = ' +
+            #                  strtotal)
             titlemain = 'density'
         elif plotvarin == 'TPrecip':
-            titlesdata.append('Precipitation; ' + 
-                              ' mean = ' +
-                              strtotal + '%')
+            labeltitles.append('%')
+
+            #titlesdata.append('Precipitation; ' + 
+            #                  ' mean = ' +
+            #                  strtotal + '%')
+            titlesdata.append('')
             titlemain = 'precip'
         elif plotvarin == 'LocalDensity':
-            titlesdata.append('Density, events/yr')
+            labeltitles.append('events/yr')
+            #titlesdata.append('Density, events/yr')
+            titlesdata.append('')
+        paneltitles.append('Total') 
+
         arrayindex += 1
+
+
 
     for iday in range(0,nbounds):
         dataPercent[iday+arrayindex,:,:] = 100.0 * (np.where(dataAllAvg > 0,
@@ -300,34 +313,38 @@ def getplotdata(plotvarin,Datain,Versionin,
             strmean = '{:2.2g}'.format(
                             np.nanmean(dataPercent[iday+arrayindex,:,:]))
 
-        if (abs(tbound2[iday]) < abs(tbound1[iday]*10) or 
-            abs(tbound1[iday]) < abs(tbound2[iday]*10) or
-            tbound1[iday] == 0 or tbound2[iday] == 0):
+        if (iday == 0):
+            paneltitles.append('<' + str(int(tbound2[iday])) + ' ' + unit) 
+            titlesdata.append('')
+            labeltitles.append('%')
+        elif (iday == nbounds - 1):
+            paneltitles.append('>' + str(int(tbound1[iday])) + ' ' + unit) 
+            titlesdata.append('')
+            labeltitles.append('%')
+        else:
+            paneltitles.append(str(int(tbound1[iday])) + 
+                              '-' + str(int(tbound2[iday])) + ' ' + unit)
             titlesdata.append('')
                               #str(int(tbound1[iday])) + 
                               #'-' + str(int(tbound2[iday])) + ' ' + unit + 
                               #'; mean = ' +
                               #strmean + '%')
-        else:
-            titlesdata.append('')
-                              #'>' + str(int(tbound1[iday])) + ' ' +
-                              #unit + '; mean = ' +
-                              #strmean + '%')
+            labeltitles.append('%')
     newDA = xray.DataArray(dataPercent,
                            coords=[('lifetimemin',lifetimemin),
                                    ('lat',lats),
                                    ('lon',lons)])
-    return(titlesdata,newDA)
+    return(titlesdata,paneltitles,labeltitles,newDA)
 
 # Get the data
 
-titlescol1,datacol1 = getplotdata(plotvar1,
+titlescol1,paneltitles,labeltitles1,datacol1 = getplotdata(plotvar1,
                                   Data1,Version1,
                                   MinLatF,MaxLatF,
                                   MinLonF,MaxLonF,
                                   anstartyr,anendyr)
 
-titlescol2,datacol2 = getplotdata(plotvar2,
+titlescol2,paneltitles,labeltitles2,datacol2 = getplotdata(plotvar2,
                                   Data2,Version2,
                                   MinLatF,MaxLatF,
                                   MinLonF,MaxLonF,
@@ -358,6 +375,7 @@ if plotvar2 in ['LocalDensity','TDensity','TPrecip'] and sumlats > 0:
     datacol2 = conserveRegrid(datacol2,
                                   'lat','lon',
                                   sumlats,sumlons)
+print paneltitles
 if args.totals == 1:
     print('plotting totals')
     plotmap(datacol1,datacol2,
@@ -365,7 +383,8 @@ if args.totals == 1:
             titlescol1,titlescol2,
             titlein,figtitlein,
             MinLonF,MaxLonF,MinLatF,MaxLatF,
-            FillValue)
+            FillValue,paneltitles,
+            labeltitles1,labeltitles2)
 else:
     # if not plotting totals, take 1st cb values out of array
     plotmap(datacol1,datacol2,
@@ -373,7 +392,8 @@ else:
             titlescol1,titlescol2,
             titlein,figtitlein,
             MinLonF,MaxLonF,MinLatF,MaxLatF,
-            FillValue)
+            FillValue,paneltitles,
+            labeltitles1,labeltitles2)
 
 
 

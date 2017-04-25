@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Aug 12 17:45:25 2015
+Script to calculate the surface area of gridded data.
 
-@author: rachel
+Created: Oct 2016
+Author: Rachel H White rhwhite@uw.edu
 """
 
 import os, errno

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+#
 """
-Spyder Editor
+Example usage:
+python map_time_speed_monthly_locdensity_arg.py --Data TRMMERAIgd --Version Standard --startyr 1998 --endyr 2014 --splittype day --unit day --tbound1 0 1 2 5 --tbound2 1 2 5 100 --minGB 0 --speedtspan 0
 
-This is a temporary script file.
 """
 import os
 import errno
@@ -350,7 +351,7 @@ for ibound in range(0,nbounds):
     # Create new datasets
     print DirO + FileO
 
-    datasplitin.append(xrayOpen(DirI + FileI1,decodetimes=False))
+    datain.append(xrayOpen(DirI + FileI1,decodetimes=False))
 
     eventsin = (xrayOpen(DirI + File1,decodetimes=False))
 

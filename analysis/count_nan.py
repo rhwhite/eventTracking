@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Spyder Editor
-
-This is a temporary script file.
+Script file to count the number of NaNs in the raw precipitation data to check
+how these change over time
 """
 import os, errno
 import numpy as np

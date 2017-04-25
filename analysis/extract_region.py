@@ -11,7 +11,7 @@ from netCDF4 import Dataset
 import datetime as dt
 import re
 import sys
-import Ngl
+#import Ngl
 import xray
 import math
 import resource
@@ -21,16 +21,7 @@ from rhwhitepackages.readwrite import xrayOpen
 from rhwhitepackages.readwrite import getdirectory
 
 parser = argparse.ArgumentParser(description="map event data")
-parser.add_argument('--splittype',metavar='splittype',type=str,nargs=1,
-                    help = 'the type of split you want, day, speed, or maxspeed')
-parser.add_argument('--speedtspan',metavar='speedtspan',type=int,nargs='?',default=4,
-                    help='how many time spans does the speed average cover?')
-parser.add_argument('--tbound1',metavar='tbound',type=float,nargs='+',
-                    help='lower bounds')
-parser.add_argument('--tbound2',metavar='tbound2',type=float,nargs="+",
-                    help='upper bounds')
-parser.add_argument('--unit',type=str,nargs=1,help='units of split type')
-
+parser.add_argument('--Name',type=str,nargs=1,help='name of region')
 parser.add_argument('--Data',type=str,nargs=1,help='type of Data, TRMM, ERAI,ERA20C, or CESM')
 parser.add_argument('--Version',type=str,nargs=1,help='Version of Data, Standard, low, 6th_from6 etc')
 parser.add_argument('--filetspan',type=str,nargs='?',default=['3hrly'],help='string for file time resolution, 3hrly etc')
@@ -44,6 +35,26 @@ parser.add_argument('--minlat',type=int,nargs='?',default=-90,
                     help='minimum latiitude for extraction')
 parser.add_argument('--maxlat',type=int,nargs='?',default=90,
                     help='maximum latitude for extraction')
+## Define functions
+
+def createfile(filenameM, f4varsin, f8varsin):
+
+    filenameM.createDimension('events', None)
+
+    filevarsM = []
+    for ivar in range(0,len(f4varsin)):
+            filevarsM.append(filenameM.createVariable(f4varsin[ivar],'f4',('events'),fill_value=-9999))
+            units,desc = getunitsdesc(f4vars[ivar])
+            setattr(filevarsM[-1],'units',units)
+            setattr(filevarsM[-1],'description',desc)
+
+    for ivar in range(0,len(f8varsin)):
+            filevarsM.append(filenameM.createVariable(f8varsin[ivar],'f8',('events'),fill_value=-9999))
+            setattr(filevarsM[-1],'description','event id number')
+
+    return (filevarsM)
+
+
 
 def isinregion(ilat,ilon,minlat,maxlat,minlon,maxlon,checklons):
     if ilat < minlat or ilat > maxlat:
@@ -52,26 +63,18 @@ def isinregion(ilat,ilon,minlat,maxlat,minlon,maxlon,checklons):
         if checklons:
             if ilon < minlon or ilon > maxlon:
                 return False
+            else:
+                return(True)
         else:
             return(True)
 
 args = parser.parse_args()
 print "here's what I have as arguments: ", args
 
-if args.splittype[0] not in ["day","speed","maxspeed"]:
-        exit("incorrect splittype " + str(args.splittype[0]) + 
-            " must be day, speed, or maxspeed")
-if args.speedtspan not in [0,1,4]:
-        exit("incorrect speedtspan " + str(args.speedtspan[0]) + 
-            " must be 0 or 1")
 if args.Data[0] not in ['TRMM','TRMMERAIgd','ERAI','ERA20C','CESM']:
         exit("incorrect Data option " + str(args.Data[0]) + " must be TRMM, TRMMERAIgd, ERAI,ERA20C or CESM")
 
-splittype = args.splittype[0]
-speedtspan = args.speedtspan
-tbound1 = args.tbound1
-tbound2 = args.tbound2
-unit = args.unit[0]
+filename = args.Name[0]
 Data = args.Data[0]
 Version = args.Version[0]
 filetimespan = args.filetspan[0]
@@ -81,9 +84,6 @@ minlon = args.minlon
 maxlon = args.maxlon
 minlat = args.minlat
 maxlat = args.maxlat
-diradd = getdirectory(splittype)
-
-nbounds = len(tbound1)
 
 R = 6371000     # radius of Earth in m
 
@@ -119,13 +119,10 @@ else:
     print("unexpected data type")
     exit()
 
-DirO = DirI + diradd + '/'
 FileI1 = 'All_Precip_' + str(startyr) + '-' + str(endyr) + '_' + Data + '_' + Version + '.nc'
-
 
 #Get lons and lats
 iday = 0
-print FileInLats
 FileIn = xrayOpen(FileInLats)
 
 if Data == "CESM":
@@ -147,92 +144,73 @@ datain = xrayOpen(DirI + FileI1,decodetimes=False)
 
 nevents = len(datain.events)
 
-averageydist = np.zeros(nbounds)
-averageyspeed = np.zeros(nbounds)
-averageprecipperhr = np.zeros(nbounds)
-averageprecipperareahr = np.zeros(nbounds)
-averagetime = np.zeros(nbounds)
+f4vars = np.array(['gridboxspanSA','totalprecipSA','uniquegridboxspanSA',
+                   'gridboxspan','totalprecip','uniquegridboxspan','timespan',
+                   'tstart','tmean','xcenterstart','xcenterend','ycenterstart',
+                   'ycenterend','loncentermean','latcentermean',
+                   'xmin','xmax','ymin','ymax'])
 
-count = np.zeros(nbounds)
+f8vars = np.array(['eventid'])
 
-nevents = 100
-
-timespan = datain.timespan[0:nevents].values
-ycenterstart = datain.ycenterstart[0:nevents].values
-ycenterend = datain.ycenterend[0:nevents].values
-xcenterstart = datain.xcenterstart[0:nevents].values
-xcenterend = datain.xcenterend[0:nevents].values
-
-timespan = datain.timespan[0:nevents].values
-totalprecip = datain.totalprecip[0:nevents].values
-gridboxspan = datain.gridboxspan[0:nevents].values
+nf4vars = len(f4vars) 
 
 startlats = lats[datain.ycenterstart[0:nevents].astype(int)]
 endlats = lats[datain.ycenterend[0:nevents].astype(int)]
+startlons = lons[datain.xcenterstart[0:nevents].astype(int)]
+endlons = lons[datain.xcenterend[0:nevents].astype(int)]
 
-print startlats
+midlats = lats[datain.ycentermean[0:nevents].astype(int)]
+midlons = lons[datain.xcentermean[0:nevents].astype(int)]
 
+
+invars = np.zeros([len(f4vars),nevents],np.float)
+#read in variables
+for ivar in range(0,len(f4vars)):
+    if f4vars[ivar] not in ['loncentermean','latcentermean']:
+        invars[ivar,:] = datain[f4vars[ivar]].values
+
+
+## Create new files and put these file handles in arrays
+
+filevars = []
+
+ncfiles = []
+
+FileO = filename + '_Precip_Events_' + Data  + str(startyr) + '-' + str(endyr) + '_' + Version + '.nc'
+
+ncfileO = Dataset(DirI + FileO, 'w')
+filevars = createfile(ncfileO,f4vars,f8vars)
+
+print len(filevars)
+writeidx = 0
 for ievent in range(0,nevents):
     # check if in region
-    ilat = startlats[ievent]
-    if ilat < minlat or ilat > maxlat:
-        continue
-    else:
-        ilat = endlats[ievent]
-        if ilat < minlat or ilat > maxlat:
-            continue
-        else:
 
-            for ibound in range(0,nbounds):
-                if timespan[ievent] < tbound2[ibound]*24:
-                    print (startlats[ievent], '-',
-                            endlats[ievent])
+    # center HAS to be in region
+    if (isinregion(midlats[ievent],midlons[ievent],minlat,maxlat,minlon,maxlon,checklons)):
 
-                    # multiply by 24 to get hours
-                    ydist = (ycenterend[ievent] - ycenterstart[ievent])
-                    time = timespan[ievent]
-                    precip = totalprecip[ievent]
-
-                    averageydist[ibound] += ydist
-                    averageyspeed[ibound] += ydist/time
-                    # if negative then that's fine for NH, positive is fine
-                    # for southern hemisphere, so get the average event
-                    # distance travelled
-
-                    averagetime[ibound] += time
-                    averageprecipperhr[ibound] += (precip/time)
-                    # Include factor of 3 to convert to hours, not timesteps
-                    averageprecipperareahr[ibound] += (precip/(3.0 *
-                                                        gridboxspan[ievent]))
-                    count[ibound] += 1
-                    break
-
-print count
-averageydist = averageydist / count
-averageyspeed = averageyspeed / count
-averagetime = averagetime / count
-averageprecipperhr = averageprecipperhr / count
-averageprecipperareahr = averageprecipperareahr / count
+        # Plus either start OR end
+        if (isinregion(startlats[ievent],startlons[ievent],minlat,maxlat,minlon,maxlon,checklons)
+            or
+            isinregion(endlats[ievent],endlons[ievent],minlat,maxlat,minlon,maxlon,checklons)):
 
 
-# Write out to a text file
+            # print to file
+            for ivar in range(0,len(f4vars)):
+                if f4vars[ivar] not in ['loncentermean','latcentermean']:
+                    filevars[ivar][writeidx] = invars[ivar,ievent]
+                else:
+                    if f4vars[ivar] == 'loncentermean':
+                        filevars[ivar][writeidx] = midlons[ievent]
+                    elif f4vars[ivar] == 'latcentermean':
+                        filevars[ivar][writeidx] = midlats[ievent]
 
-with open(DirI + '/testDomainAverages_' + '{:d}'.format(minlat) + 'N-' +
-            '{:d}'.format(maxlat) + 'N.txt', 'w') as text_file:
-    text_file.write('Domain averages for ' + '{:d}'.format(minlat) + 'N-' +
-            '{:d}'.format(maxlat) + 'N and ' + '{:d}'.format(minlon) + 'E-' +
-            '{:d}'.format(maxlon) + 'E \n')
-    text_file.write('Timespan (hours), averageydistance (degs), averageyspeed'+
-            '(degs/hr), averagepreciphr (mm/hr), averagepreciphr (mm/gridbox/hr) \n')
-    for ibound in range(0,nbounds):
-        text_file.write('{0:d}'.format(tbound1[ibound]) + '-' +
-                        '{0:d}'.format(tbound2[ibound]) + ' days,   ' +
-                        '{0:f}'.format(averageydist[ibound]) + ' degrees,    ' +
-                        '{0:f}'.format(averageyspeed[ibound]) + ' degrees/hr,    ' +
-                        '{0:f}'.format(averagetime[ibound]) + ' hours,    ' +
-                        '{0:f}'.format(averageprecipperhr[ibound]) + ' mm/hr,    ' +
-                        '{0:f}'.format(averageprecipperareahr[ibound]) + 'mm/hr/gridbox \n')
+            # print last variable, ievent
+            filevars[nf4vars][writeidx] = ievent + minevent
+            writeidx += 1
 
+    if ievent % 10000 == 0:
+        print ievent
 
 datain.close()
 

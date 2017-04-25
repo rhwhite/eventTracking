@@ -77,23 +77,24 @@ runCodeFit(){
 	echo running with namelist namelist_${dataV}_${versionV}_${startyrV}-${endyrV}.dat
 	./FiT_Object_analysis_basic_with_NetCDF4.exex namelist_${dataV}_${versionV}_${startyrV}-${endyrV}.dat
 
-	./add_record_concat.sh -d $dataV -v $versionV -s $startyrV -e $endyrV -n $numfilesV 
+	/home/disk/eos4/rachel/git/Python/eventTracking/analysis/add_record_concat.sh -d $dataV -v $versionV -s $startyrV -e $endyrV -n $numfilesV 
 }
 
 runProc(){
 	cd /home/disk/eos4/rachel/git/Python/eventTracking/analysis/
-	echo python process_full_output_arg.py --Data ${dataV} --Version ${versionV}
-	python process_full_output_arg.py --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV}
+	echo python process_full_output.py --Data ${dataV} --Version ${versionV}
+	python process_full_output.py --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV}
 }
 
 runExt() {
     cd /home/disk/eos4/rachel/git/Python/eventTracking/analysis/
 
-    echo python extract_time_speed_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
-    python extract_time_speed_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs} || return 1
+    # Current analysis separates events by lifetime, and then by speed.
+    echo python extract_time_speed.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
+    python extract_time_speed.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs} || return 1
     
-    echo python extract_time_speed_arg.py --splittype maxspeed --speedtspan 4 --tbound1 -1000 -30 -10 -6 -3 3 6 10 30 --tbound2 -30 -10 -6 -3 3 6 10 30 1000 --unit ms-1 --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
-    python extract_time_speed_arg.py --splittype maxspeed --speedtspan 4 --tbound1 -1000 -30 -10 -6 -3 3 6 10 30 --tbound2 -30 -10 -6 -3 3 6 10 30 1000 --unit ms-1 --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs} || return 1
+    echo python extract_time_speed.py --splittype maxspeed --speedtspan 4 --tbound1 -1000 -30 -10 -6 -3 3 6 10 30 --tbound2 -30 -10 -6 -3 3 6 10 30 1000 --unit ms-1 --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
+    python extract_time_speed.py --splittype maxspeed --speedtspan 4 --tbound1 -1000 -30 -10 -6 -3 3 6 10 30 --tbound2 -30 -10 -6 -3 3 6 10 30 1000 --unit ms-1 --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs} || return 1
 
 }
 

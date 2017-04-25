@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Spyder Editor
-
-This is a temporary script file.
+This script options up data files with python debugging set up so that the data
+files can be explored in real time
 """
 import os, errno
 import numpy as np
