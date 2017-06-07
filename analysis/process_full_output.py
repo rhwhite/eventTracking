@@ -44,7 +44,6 @@ parser.add_argument('--speedtspan',type=int,nargs='?',default=[4],help='how many
 parser.add_argument('--startyr',metavar='startyr',type=int,nargs=1,help='start year for analysis')
 parser.add_argument('--endyr',type=int,nargs=1,help='end year for analysis')
 
-
 args = parser.parse_args()
 
 print "here's what I have as arguments: ", args
@@ -52,8 +51,9 @@ print "here's what I have as arguments: ", args
 speedtspan = args.speedtspan[0]
 print speedtspan
 
-if args.Data[0] not in ['TRMM','ERAI','CESM','TRMMERAIgd','ERA20C']:
-    exit("incorrect Data option " + str(args.Data[0]) + " must be TRMM, TRMMERAIgd,ERAI,ERA20C, or CESM")
+if args.Data[0] not in ['TRMM','ERAI','CESM','TRMMERAIgd','ERA20C','GPCP']:
+    exit("incorrect Data option " + str(args.Data[0]) + 
+         " must be TRMM, TRMMERAIgd,ERAI,ERA20C, CESM, or GPCP")
 
 Data = args.Data[0]
 Version = args.Version[0]
@@ -71,6 +71,9 @@ if filetimespan == "3hrly":
     elif Data == "CESM":
         # convert from m/s to mm/3 hours to get total rain over event for 3-hourly data
         mult =  1000.0 * 60.0 * 60.0 * 3.0
+    elif Data =='GPCP':
+        # no need to convert: data in mm/day, and resolution is daily
+        mult = 1.0
     else:
         sys.error(Data + " not defined")
 else:
@@ -124,6 +127,11 @@ elif Data == "ERA20C":
 elif Data == "CESM":
     DirP = '/home/disk/eos4/rachel/EventTracking/Inputs/CESM/f.e13.FAMPIC5.ne120_ne120.1979_2012.001/'
     FileP = 'f.e13.FAMIPC5.ne120_ne120_TotalPrecip_1979-2012.nc'
+elif Data == "GPCP":
+    DirP = '/home/disk/eos4/rachel/Obs/GPCP/Daily/'
+    FileP = 'GPCP_1DD_v1.2_199610-201510.nc'
+
+
 else:
     sys.error("unknown Data type")
 
@@ -153,7 +161,7 @@ griddata = xrayOpen(DirP + Filegrid)
 SurfA = griddata['SurfaceArea']
 
 # Open precip file for latitudes
-if Data == "CESM":
+if Data in ["CESM",'GPCP']:
     lons = precipdata['lon'].values
     lats = precipdata['lat'].values
 else:
@@ -175,7 +183,7 @@ event1 = int(first[0])
 nevents = int(last[0]) - event1 + 1
 
 if args.test == 1:
-    nevents = 1000
+    nevents = 500
 print("nevents: ", nevents)
 
 minx = np.zeros(nevents)
@@ -197,12 +205,13 @@ centerx = np.zeros(nevents)
 centery = np.zeros(nevents)
 meant = np.zeros(nevents)
 
+
 preeventnum = -100
 
 print first
 timestart = time.time()
 
-maxlines = 2000000
+maxlines = 3000000
 skips = 1
 eventnum = 0
 
@@ -210,10 +219,6 @@ while eventnum < nevents:
     for attempt in range(10):
         try:
             print "skips,",skips
-#           if skips < 0:
-#                                print "We've got to the end of the file!"
-#                                eventnum += 1   # to get out of outer loop!
-#                                break
             try:
                 textdata1 = np.genfromtxt(Dir + TxtFileIn,dtype='int',skip_header = skips, max_rows = maxlines,usecols = (0,2))
                 textdata2 = np.genfromtxt(Dir + TxtFileIn,dtype='string',skip_header = skips, max_rows = maxlines,usecols = (3,4,6))
@@ -272,6 +277,7 @@ while eventnum < nevents:
                     eventcount += 1
                     if iline == nlines -1:  #i.e. we're at the end of our chunk
                         #print "in the middle of event ", eventnum
+
                         if nlines < maxlines:   # then we reached the end of the file 
                             print "ending of file", nlines, maxlines
                             skips += nlines
@@ -282,7 +288,10 @@ while eventnum < nevents:
                             break   # break out of loop
                         else:
                             print "eventnum last in chunk ", eventnum
+                            print "eventcount", eventcount
+                            print "skips before", skips
                             skips += nlines-eventcount      # Skip back to beginning of this event
+                            print 'skips here', skips
                 else:
                     if (preeventnum >= 0): #then it's not the very first event
                         geteventdata(index)
@@ -290,30 +299,37 @@ while eventnum < nevents:
                     #refresh list
                     #update index for new event
                     index = eventnum
-                    preeventnum = eventnum
 
-                    mint[index] = eventtimes[iline]
-                    minx[index] = xs[iline,0]
-                    maxx[index] = xs[iline,1]
-                    miny[index] = ys[iline,0]
-                    maxy[index] = ys[iline,1]
+                    if index >= nevents:     # then we're testing and have got
+                                            # all the events we need.
+                        break
+                    else:
+                        preeventnum = eventnum
 
-                    listt = [(eventtimes[iline])]
+                        mint[index] = eventtimes[iline]
+                        minx[index] = xs[iline,0]
+                        maxx[index] = xs[iline,1]
+                        miny[index] = ys[iline,0]
+                        maxy[index] = ys[iline,1]
 
-                    listcenterx = [(cxy[iline,0])]
-                    listcentery = [(cxy[iline,1])]
+                        listt = [(eventtimes[iline])]
 
-                    eventcount=1
+                        listcenterx = [(cxy[iline,0])]
+                        listcentery = [(cxy[iline,1])]
 
+                        eventcount=1
 
                 if iline == nlines-1:   # i.e. we're at the end of our chunk
                     print "last event was single"
                     print "eventnum last in chunk ", eventnum
                     geteventdata(index)
-                if nlines < maxlines:   # then we reached the end of the file 
-                    skips += nlines
-                else:
-                    skips +=nlines-1 # go back to start of this event.
+ 
+                    if nlines < maxlines:   # then we reached the end of the file 
+                        print "add to skips so we read end of file", skips, nlines
+                        skips += nlines
+                        print "skips now", skips
+                    else:
+                        skips += nlines-1 # go back to start of this event.
 
         except MemoryError:
             print "Memory error, trying to chunk"
@@ -364,7 +380,8 @@ elif Data in ["ERAI","ERA20C"]:
 elif Data == "CESM":
     # No conversion here as put into mult instead
     precipin = precipdata['PRECT'].sel(time=slice(str(startyr),str(endyr)))
-    print precipin.shape
+elif Data == 'GPCP':
+    precipin = precipdata['PREC'].sel(time=slice(str(startyr),str(endyr)))
 
 ntimespre = len(precipdata['time'])
 
@@ -380,7 +397,7 @@ print "nevents here:", nevents
 ncfile = Dataset(DirO + FileO, 'w')
 ncfile.createDimension('events', nevents)
 
-today = dt.today()
+today = dt.date.today()
 ncfile.history=('Created using process_full_output.py on ' +
             today.strftime('%d/%m/%y')  + 'with inputs: ' + Data +
             '; ' + Version + '; ' + str(startyr) + '-' + str(endyr))
@@ -412,38 +429,36 @@ print "starting now"
 tminchunk = 0
 tmaxchunk = 0
 
-if args.test == 1:
-    maxrun = minevent + 20
-else:
-    maxrun = minevent + nevents
+maxrun = minevent + nevents
+
+
 #for ievent in range(minevent, minevent + 3): ### For testing!!!
 for ievent in range(minevent,maxrun):
-
     index = ievent-minevent
-    tmin = max(0,mint[index]-1)
-    tmax = min(ntimes,maxt[index]+1)
+    tmin = int(max(0,mint[index]-1))
+    tmax = int(min(ntimes,maxt[index]+1))
 
-    ymin = max(0,miny[index]-latlonaddsize)
-    ymax = min(nlats,maxy[index]+latlonaddsize)
+    ymin = int(max(0,miny[index]-latlonaddsize))
+    ymax = int(min(nlats,maxy[index]+latlonaddsize))
 
-    xmin = max(0,minx[index]-latlonaddsize)
-    xmax = min(nlons,maxx[index]+latlonaddsize)
+    xmin = int(max(0,minx[index]-latlonaddsize))
+    xmax = int(min(nlons,maxx[index]+latlonaddsize))
 
     if (xmin > xmax):
         print "wrapping around lons"
         xmin = 0
         xmax = nlons
 
-        if (ymin > ymax):
+    if (ymin > ymax):
         sys.exit("wrapping around lats - something is wrong!")
 
-        if (tmax > tmaxchunk):
-                print "tmax is " + str(tmax) + " whilst tmaxchunk is " + str(tmaxchunk)
+    if (tmax > tmaxchunk):
+        print "tmax is " + str(tmax) + " whilst tmaxchunk is " + str(tmaxchunk)
 
         for attempt in range(10):
             try:
-                tminchunk = max(tmin - 10,0)
-                tmaxchunk = min(tmax + chunksize + 1,ntimes)
+                tminchunk = int(max(tmin - 10,0))
+                tmaxchunk = int(min(tmax + chunksize + 1,ntimes))
                 print "tminchunk is now " + str(tminchunk) + "whilst tmin is " + str(tmin)
                 print "tmaxchunk is now " + str(tmaxchunk) + "whilst tmax is " + str(tmax)
                 eventschunk = eventsin.isel(time=slice(tminchunk,tmaxchunk)).values
@@ -455,13 +470,13 @@ for ievent in range(minevent,maxrun):
                 continue
             break
         else:
-            exit("couldn't find enough memory") 
+            exit("couldn't find enough memory")
 
     if (ievent % 5000000 == 0):
         print "ievent: " + str(ievent)
 
-    tminsel = max((tmin-tminchunk)-1,0) 
-    tmaxsel = min((tmax-tminchunk)+2,ntimes)
+    tminsel = int(max((tmin-tminchunk)-1,0))
+    tmaxsel = int(min((tmax-tminchunk)+2,ntimes))
 
     eventsin_small = eventschunk[tminsel:tmaxsel,ymin:ymax,xmin:xmax]
     data_mask_small = np.ma.array(eventsin_small,mask=(eventsin_small == ievent))
@@ -485,18 +500,18 @@ for ievent in range(minevent,maxrun):
         print data_mask_small.shape
         exit("ValueError")
 
-ncfile['gridboxspan'][ievent-minevent] = (np.sum([data_mask_small.mask]))
-# there used to be a factor of 0.001 here to convert from mm to m.
-# but we want to keep it in mm!
-#        ncfile['totalprecip'][ievent-minevent] = (0.001 * np.nansum([data_mask_small.mask * precipin_small]))
-ncfile['totalprecip'][ievent-minevent] = (np.nansum([data_mask_small.mask * precipin_small]))
-# SurfA is in m2
-ncfile['uniquegridboxspanSA'][ievent-minevent] = (np.sum([data_mask_max*SurfA_small]))
-ncfile['gridboxspanSA'][ievent-minevent] = (np.sum([data_mask_small.mask*SurfA_small[None,:,:]]))
-# Factor of 0.001 to convert from mm to m
-# SurfS_small is in m2
-# So OtotalP is in m3
-ncfile['totalprecipSA'][ievent-minevent] = (0.001 * np.nansum([data_mask_small.mask * precipin_small * SurfA_small[None,:,:]]))
+    ncfile['gridboxspan'][ievent-minevent] = (np.sum([data_mask_small.mask]))
+    # there used to be a factor of 0.001 here to convert from mm to m.
+    # but we want to keep it in mm!
+    #        ncfile['totalprecip'][ievent-minevent] = (0.001 * np.nansum([data_mask_small.mask * precipin_small]))
+    ncfile['totalprecip'][ievent-minevent] = (np.nansum([data_mask_small.mask * precipin_small]))
+    # SurfA is in m2
+    ncfile['uniquegridboxspanSA'][ievent-minevent] = (np.sum([data_mask_max*SurfA_small]))
+    ncfile['gridboxspanSA'][ievent-minevent] = (np.sum([data_mask_small.mask*SurfA_small[None,:,:]]))
+    # Factor of 0.001 to convert from mm to m
+    # SurfS_small is in m2
+    # So OtotalP is in m3
+    ncfile['totalprecipSA'][ievent-minevent] = (0.001 * np.nansum([data_mask_small.mask * precipin_small * SurfA_small[None,:,:]]))
 
 ncfile['timespan'][:] = (maxt[:]-mint[:]+ 1) * tmult
 
