@@ -4,11 +4,12 @@
 email=rhwhite@uw.edu	# the email address you want failure messages to be sent to
 runThresh=0
 runCodeFit=0
-runProc=0
-runExt=0
-runAna=0
-runRegrid=0
-runFig=0
+runConcat=0
+runProc=1
+runExt=1
+runAna=1
+runRegrid=1
+runFig=1
 minGBs=-1
 
 while getopts "t:c:p:a:r:f:d:v:s:e:n:l:m:x:" opt; do
@@ -66,7 +67,7 @@ echo 'numlats/lons: ' $numlatsV
 echo 'min gridboxes: ' $minGBs
 
 runThresh(){
-	python thresholding.py --Data $dataV --Version $versionV --startyr $startyrV --endyr $endyrV
+	python ../preprocess/thresholding.py --Data $dataV --Version $versionV --startyr $startyrV --endyr $endyrV
 }
 
 runCodeFit(){
@@ -76,7 +77,8 @@ runCodeFit(){
 	mkdir -p ${dataV}_output/${versionV}${startyrV}/raw/
 	echo running with namelist namelist_${dataV}_${versionV}_${startyrV}-${endyrV}.dat
 	./FiT_Object_analysis_basic_with_NetCDF4.exex namelist_${dataV}_${versionV}_${startyrV}-${endyrV}.dat
-
+}
+runConcat(){
 	/home/disk/eos4/rachel/git/Python/eventTracking/analysis/add_record_concat.sh -d $dataV -v $versionV -s $startyrV -e $endyrV -n $numfilesV 
 }
 
@@ -101,16 +103,16 @@ runExt() {
 runAna() {
     cd /home/disk/eos4/rachel/git/Python/eventTracking/analysis/
 
-	echo python map_time_speed_monthly_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
+	echo python map_time_speed_monthly_locdensity_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
 	python map_time_speed_monthly_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs} || return 1
 
-	echo python map_time_speed_monthly_arg.py --splittype maxspeed --speedtspan 4 --tbound1 -1000 -30 -10 -6 -3 3 6 10 30 --tbound2 -30 -10 -6 -3 3 6 10 30 1000 --unit ms-1 --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
+	echo python map_time_speed_monthly_locdensity_arg.py --splittype maxspeed --speedtspan 4 --tbound1 -1000 -30 -10 -6 -3 3 6 10 30 --tbound2 -30 -10 -6 -3 3 6 10 30 1000 --unit ms-1 --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
 	python map_time_speed_monthly_arg.py --splittype maxspeed --speedtspan 4 --tbound1 -1000 -30 -10 -6 -3 3 6 10 30 --tbound2 -30 -10 -6 -3 3 6 10 30 1000 --unit ms-1 --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs} || return 1
 
-    echo python map_time_speed_monthly_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
+    echo python map_time_speed_monthly_locdensity_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
     python map_time_speed_monthly_arg.py --splittype day --speedtspan 4 --tbound1 0 1 2 5 1 --tbound2 1 2 5 100 5 --unit day --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs} || return 1
 
-    echo python map_time_speed_annual_arg.py --splittype maxspeed --speedtspan 4 --tbound1 -1000 -30 -10 -6 -3 3 6 10 30 --tbound2 -30 -10 -6 -3 3 6 10 30 1000 --unit ms-1 --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
+    echo python map_time_speed_annual_locdensity_arg.py --splittype maxspeed --speedtspan 4 --tbound1 -1000 -30 -10 -6 -3 3 6 10 30 --tbound2 -30 -10 -6 -3 3 6 10 30 1000 --unit ms-1 --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs}
     python map_time_speed_annual_arg.py --splittype maxspeed --speedtspan 4 --tbound1 -1000 -30 -10 -6 -3 3 6 10 30 --tbound2 -30 -10 -6 -3 3 6 10 30 1000 --unit ms-1 --Data ${dataV} --Version ${versionV} --startyr ${startyrV} --endyr ${endyrV} --minGB ${minGBs} || return 1
 
 }
@@ -145,6 +147,9 @@ if [ $runThresh -eq 1 ]; then
 fi
 if [ $runCodeFit -eq 1 ]; then
 	runCodeFit || report fiterror
+fi
+if [ $runConcat -eq 1 ]; then
+    runConcat || report concaterror
 fi
 if [ $runProc -eq 1 ]; then
 	runProc || report processingerror
