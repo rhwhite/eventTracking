@@ -39,7 +39,6 @@ parser = argparse.ArgumentParser(description="map event data")
 parser.add_argument('--Data',type=str,nargs=1,help='type of Data, TRMM, ERAI, ERA20C, or CESM')
 parser.add_argument('--Version',type=str,nargs=1,help='Version of Data, Standard, low, 6th_from6 etc')
 parser.add_argument('--test',type=int,nargs='?',default=0,help='if 1, run quick test version of code')
-parser.add_argument('--filetspan',type=str,nargs='?',default=['3hrly'],help='string for file time resolution, 3hrly etc')
 parser.add_argument('--speedtspan',type=int,nargs='?',default=[4],help='how many timespans to avg speed over')
 parser.add_argument('--startyr',metavar='startyr',type=int,nargs=1,help='start year for analysis')
 parser.add_argument('--endyr',type=int,nargs=1,help='end year for analysis')
@@ -58,26 +57,32 @@ if args.Data[0] not in ['TRMM','ERAI','CESM','TRMMERAIgd','ERA20C','GPCP']:
 Data = args.Data[0]
 Version = args.Version[0]
 
-filetimespan = args.filetspan[0]
 startyr = args.startyr[0]
 endyr = args.endyr[0]
 
 
-if filetimespan == "3hrly":
+if Data in ["ERAI","TRMM","TRMMERAIgd","ERA20C","CESM"]:
+    filetimespan = "3hrly"
     tmult = 3   # multiplier for timespans to get to hours
     if Data in ["ERAI","TRMM","TRMMERAIgd","ERA20C"]:
-        # convert from mm/hour to mm/3 hours to get total rain over event for 3-hourly data
+        # convert from mm/hour to mm/3 hours to get total rain over event for
+        # 3-hourly data
         mult = 3.0
+
     elif Data == "CESM":
-        # convert from m/s to mm/3 hours to get total rain over event for 3-hourly data
+        # convert from m/s to mm/3 hours to get total rain over event for 3-hourly
+        # data
         mult =  1000.0 * 60.0 * 60.0 * 3.0
-    elif Data =='GPCP':
-        # no need to convert: data in mm/day, and resolution is daily
-        mult = 1.0
-    else:
-        sys.error(Data + " not defined")
+
+elif Data == 'GPCP':
+    filetimespan = "daily"
+    tmult = 24   # multiplier for timespans to get to hours
+    # no need to convert: data in mm/day, and resolution is daily
+    mult = 1.0
 else:
-    exit("unacceptable filetimespan: " + str(filetimespan)) 
+    sys.error(Data + " not defined")
+
+
 if args.test == 1:
     chunksize = 50
 else:
