@@ -62,8 +62,9 @@ if args.splittype[0] not in ["day","speed","maxspeed"]:
         exit("incorrect splittype " + str(args.splittype[0]) + " must be day, speed, or maxspeed")
 if args.speedtspan not in [0,1,4]:
         exit("incorrect speedtspan " + str(args.speedtspan[0]) + " must be 0 or 1")
-if args.Data[0] not in ['TRMM','TRMMERAIgd','ERAI','ERA20C','CESM']:
-        exit("incorrect Data option " + str(args.Data[0]) + " must be TRMM, TRMMERAIgd, ERAI,ERA20C or CESM")
+if args.Data[0] not in ['TRMM','TRMMERAIgd','ERAI','ERA20C','CESM','GPCP']:
+        exit("incorrect Data option " + str(args.Data[0]) + 
+                    " must be TRMM, TRMMERAIgd, ERAI,ERA20C, CESM or GPCP")
 
 splittype = args.splittype[0]
 speedtspan = args.speedtspan
@@ -96,6 +97,9 @@ minevent = 100000
 DirI = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/' + Data + '_output/' + Version + str(startyr) + '/proc/'
 
 
+# Set up latitude files for all data types and DirI for any that aren't
+# standard
+
 if Data == "TRMM":
     if Version == '6th_from6' or Version == '5th_from48':
         DirI = '/home/disk/eos4/rachel/EventTracking/FiT_RW/TRMM_output/' + Version + '/proc/'
@@ -112,6 +116,8 @@ elif Data == "ERA20C":
 elif Data == "CESM":
     DirI = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/CESM_output/' + Version + str(startyr) + '/proc/' 
     FileInLats = '/home/disk/eos4/rachel/EventTracking/Inputs/CESM/f.e13.FAMPIC5.ne120_ne120.1979_2012.001/f.e13.FAMIPC5.ne120_ne120_TotalPrecip_1979-2012.nc'
+elif Data == "GPCP":
+    FileInLats ='/home/disk/eos4/rachel/Obs/GPCP/Daily/GPCP_1DD_v1.2_199610-201510.nc'
 else:
     print("unexpected data type")
     exit()
@@ -125,7 +131,7 @@ iday = 0
 print FileInLats
 FileIn = xrayOpen(FileInLats)
 
-if Data == "CESM":
+if Data in ['CESM','GPCP']:
     lats = FileIn['lat'].values
     lons = FileIn['lon'].values
 elif Data in ["ERA20C","TRMMERAIgd"]:
@@ -142,6 +148,8 @@ nlons = len(lons)
 print DirI + FileI1
 datain = xrayOpen(DirI + FileI1,decodetimes=False)
 
+
+# Set up the variables we want to calculate
 varlistin = []
 
 newvar = "xmaxspeed_" + str(speedtspan) + "ts"
@@ -161,6 +169,7 @@ print varlistin
 f4vars = np.array(varlistin)
 f4varsin = np.array(varlistin)
 
+# eventids can go very high, so need more precision than f4
 f8vars = np.array(['eventid'])
 
 nf4vars = len(f4vars)
@@ -253,9 +262,6 @@ def getsplitvar(chunkfirst,chunkmax):
         splitvar = direction * distancez/(timespan*3.0*60.0*60.0)
 
     elif splittype == "maxspeed":
-        #if speedtspan == 0:
-        #   splitvar = datain['xmaxtravel'].values
-        #else:
         splitvar = datain['xmaxspeed_' + str(speedtspan) +  'ts'][chunkfirst:chunkmax].values
     else:
         exit("unacceptable splittype: " + str(splittype))
