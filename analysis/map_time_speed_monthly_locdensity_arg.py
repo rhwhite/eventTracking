@@ -118,7 +118,7 @@ def geteventprecip(indicesin, tmin, tmax, TPrecip):
     eventschunk = eventsin.isel(time=slice(tmin, tmax)).values
     for ibound in range(0,nbounds):
         data_mask = np.ma.array(eventschunk[:,0,:,:], mask=(np.in1d(eventschunk[:,0,:,:],indicesin[ibound]).reshape(eventschunk[:,0,:,:].shape)))
-        TPrecip[ibound,:, :] += np.nansum(data_mask.mask * precipchunk,axis=0)   
+        TPrecip[ibound,:, :] += np.nansum(data_mask.mask * precipchunk,axis=0)
 
     return(TPrecip)
 
@@ -132,11 +132,10 @@ def runchunk(nchunks,fromevent,toevent,TPrecip):
         TPrecip = geteventprecip(indicesL,newtmin,newtmax,TPrecip)
 
         newtmin = newtmax
-        newtmax = newtmin + chunksizes  
-    
-        # Last chunk
+        newtmax = newtmin + chunksizes 
+    # Last chunk
     #print ichunk, newtmin, tmax
-    Tprecip = geteventprecip(indicesL,newtmin,tmax,TPrecip)     
+    Tprecip = geteventprecip(indicesL,newtmin,tmax,TPrecip)
     return nchunks
 
 def runmemory(nchunks,TPrecip):
@@ -204,16 +203,19 @@ nchunks = 2 # number of chunks to start with
 R = 6371000     # radius of Earth in m
 
 if filetimespan == "3hrly":
-        if Data in ['ERAI','ERA20C','TRMM','TRMMERAIgd']:
-            # convert from mm/hour to mm/3 hours to get total rain over event for 3-hourly data
-            mult = 3.0
-            anntsteps = 365 * 8.0
-        elif Data == "CESM":
-            # convert from m/s to mm/3 hours to get total rain over event for 3-hourly data
-            mult = 1000.0 * 60.0 * 60.0 * 3.0
-            anntsteps = 365 * 8.0
-        else:
-            sys.error(Data + " not defined")
+    if Data in ['ERAI','ERA20C','TRMM','TRMMERAIgd']:
+        # convert from mm/hour to mm/3 hours to get total rain over event for 3-hourly data
+        mult = 3.0
+        anntsteps = 365 * 8.0
+    elif Data == "CESM":
+        # convert from m/s to mm/3 hours to get total rain over event for 3-hourly data
+        mult = 1000.0 * 60.0 * 60.0 * 3.0
+        anntsteps = 365 * 8.0
+    elif Data == 'GPCP':
+        mult = 1.0  # no need to multiply, data in mm/day, time resolution
+                    # daily
+    else:
+        sys.error(Data + " not defined")
 
 if test == 1:
     chunksize = 50
@@ -246,6 +248,9 @@ elif Data == "ERA20C":
 elif Data == "CESM":
     DirP = '/home/disk/eos4/rachel/EventTracking/Inputs/CESM/f.e13.FAMPIC5.ne120_ne120.1979_2012.001/'
     FileP = 'f.e13.FAMIPC5.ne120_ne120_TotalPrecip_1979-2012.nc'
+elif Data == "GPCP":
+    DirP = '/home/disk/eos4/rachel/Obs/GPCP/Daily/'
+    FileP = 'GPCP_1DD_v1.2_199610-201510.nc'
 else:
     sys.error("unexpected datatype")
 
@@ -287,11 +292,13 @@ elif Data in ["ERAI","ERA20C"]:
     precipin = precipdata['tpnew']
 elif Data == "CESM":
     precipin = precipdata['PRECT'].sel(time=slice(str(startyr),str(endyr)))
+elif Data == 'GPCP':
+    precipin = precipdata['PREC'].sel(time=slice(str(startyr),str(endyr)))
 
 ntimespre = len(precipdata['time'])
 
 tempfile = xrayOpen(DirP + FileP)
-if Data == "CESM":
+if Data in ["CESM",'GPCP']:
     lons = tempfile['lon'].values
     lats = tempfile['lat'].values
 else:
@@ -334,13 +341,10 @@ datain = []
 lons1 = []
 lons2 = []
 
-
-
 File1 = 'ts_' + Data +  str(startyr) + '-' + str(endyr) + '_' + Version + '_4Dobjects.nc'
 
-
 for ibound in range(0,nbounds):
-    FileI1 = getPrecipfilename(mapping, Data, Version, startyr, endyr, ibound, splittype, unit, speedtspan, minGB, tbound1, tbound2)    
+    FileI1 = getPrecipfilename(mapping, Data, Version, startyr, endyr, ibound, splittype, unit, speedtspan, minGB, tbound1, tbound2)
 
     FileO = getdenfilename(mapping, Data, Version, startyr, endyr, ibound, splittype, unit, speedtspan, minGB, tbound1, tbound2, 'Mon',-1,-1)
 
@@ -396,7 +400,7 @@ for ibound in range(0,nbounds):
                         if minev[ibound, itime] == n:    # then no events in this last month
                             maxev[ibound, itime] = n
                         else:
-                            maxev[ibound, itime] = n-1   
+                            maxev[ibound, itime] = n-1
                         break
                     else:
                         maxev[ibound, itime] = nevents-1 # if didn't find it, then last event is max event
@@ -416,6 +420,7 @@ if test == 1:
     nlooptimes = 1
 else:
     nlooptimes = ntotal
+
 tminchunk = 0
 tmaxchunk = 0
 precipchunk = []
@@ -446,7 +451,7 @@ for itime in range(0, nlooptimes):
         elif mapping == 'end':
             ys = datain[ibound]['ycenterend'].values
             xs = datain[ibound]['xcenterend'].values
-        
+
         gridboxspan = datain[ibound]['gridboxspan'].values
         xmaxspeed_4ts = datain[ibound]['xmaxspeed_4ts'].values
         yspans = abs(datain[ibound]['ycenterend'].values - datain[ibound]['ycenterstart'].values)
@@ -484,21 +489,21 @@ for itime in range(0, nlooptimes):
     fromevents = np.zeros((nbounds), 'int64')
     toevents = np.zeros((nbounds), 'int64')
     indicesL = []
-    
-    for ibound in range(0, nbounds):
 
+    for ibound in range(0, nbounds):
         fromevents[ibound] = minev[ibound][itime]
+
         if test == 1:
             toevents[ibound] = min(minev[ibound][itime] + 50, maxev[ibound][itime])
         else:
             toevents[ibound] = maxev[ibound][itime]
+
         #print fromevents[ibound], toevents[ibound]
         indices, tminsA[ibound], tmaxsA[ibound] = getindices(ibound, fromevents[ibound], toevents[ibound])
         indicesL.append(np.array(indices))
 
     tmax = np.amax(tmaxsA)
     tmin = np.amin(tminsA)
-    #print tmax,tmin
 
     if not runinchunks:
         try:

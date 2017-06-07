@@ -48,7 +48,6 @@ parser.add_argument('--tbound2',metavar='tbound2',type=float,nargs="+",help='upp
 parser.add_argument('--unit',type=str,nargs=1,help='units of split type')
 parser.add_argument('--Data',type=str,nargs=1,help='type of Data, TRMM, ERAI,ERA20C, or CESM')
 parser.add_argument('--Version',type=str,nargs=1,help='Version of Data, Standard, low, 6th_from6 etc')
-parser.add_argument('--filetspan',type=str,nargs='?',default=['3hrly'],help='string for file time resolution, 3hrly etc')
 parser.add_argument('--startyr',metavar='startyr',type=int,nargs=1,help='start year for analysis')
 parser.add_argument('--endyr',type=int,nargs=1,help='end year for analysis')
 parser.add_argument('--minGB',type=int,nargs='?',default=-1,help='minimum number of unique grid boxes to count as an event')
@@ -61,26 +60,27 @@ if args.splittype[0] not in ["day","speed","maxspeed"]:
         exit("incorrect splittype " + str(args.splittype[0]) + " must be day, speed, or maxspeed")
 if args.speedtspan not in [0,1,4]:
         exit("incorrect speedtspan " + str(args.speedtspan[0]) + " must be 0 or 1")
-if args.Data[0] not in ['TRMM','TRMMERAIgd','ERAI','ERA20C','CESM']:
-        exit("incorrect Data option " + str(args.Data[0]) + " must be TRMM, TRMMERAIgd, ERAI,ERA20C or CESM")
+if args.Data[0] not in ['TRMM','TRMMERAIgd','ERAI','ERA20C','CESM','GPCP']:
+        exit("incorrect Data option " + str(args.Data[0]) + 
+                " must be TRMM,TRMMERAIgd, ERAI,ERA20C, CESM or GPCP")
 
 splittype = args.splittype[0]
 speedtspan = args.speedtspan
 unit = args.unit[0]
 Data = args.Data[0]
 Version = args.Version[0]
-filetimespan = args.filetspan[0]
 startyr = args.startyr[0]
 endyr = args.endyr[0]
 minGB = args.minGB
 
-if filetimespan == '3hrly':
+if Data in ['TRMM','TRMMERAIgd','ERAI','ERA20C','CESM']:
+    filetimespan == '3hrly':
     daymult = 8     # 8 timesteps per day
-elif filetimespan == 'hrly':
-    daymult = 24    # 24 timesteps per day
+elif Data == 'GPCP':
+    filetimespan == 'daily':
+    daymult = 1    # 1 timesteps per day
 else:
-    print(filetimespan)
-    exit('unknown filetimespan')
+    exit('unknown Data',Data)
 
 
 if splittype == 'day' and unit == 'day':
@@ -129,6 +129,9 @@ elif Data == "ERA20C":
 elif Data == "CESM":
     DirI = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/CESM_output/' + Version + str(startyr) + '/proc/' 
     FileInLats = '/home/disk/eos4/rachel/EventTracking/Inputs/CESM/f.e13.FAMPIC5.ne120_ne120.1979_2012.001/f.e13.FAMIPC5.ne120_ne120_TotalPrecip_1979-2012.nc'
+elif Data == "GPCP":
+    FileInLats ='/home/disk/eos4/rachel/Obs/GPCP/Daily/GPCP_1DD_v1.2_199610-201510.nc'
+
 else:
     print("unexpected data type")
     exit()
@@ -148,7 +151,7 @@ dataIn = xrayOpen(DirI + '/All_Precip_' + str(startyr) + '-' + str(endyr) + '_' 
 #print FileInLats
 FileIn = xrayOpen(FileInLats)
 
-if Data == "CESM":
+if Data in ["CESM",'GPCP']:
     lats = FileIn['lat'].values
     lons = FileIn['lon'].values
 elif Data in ["ERA20C","TRMMERAIgd"]:
@@ -202,7 +205,6 @@ for iday in range(0,nbounds):
     # Read in events one month at a time
     # Add extra 100 to catch tails of events in different months
     events = eventsIn['value'][0:min(nextmonth+100,maxtimes),0,:,:].values
-
 
     locDensity = None
     locFracDensity = None
