@@ -57,7 +57,7 @@ parser.add_argument('--minGB',type=int,nargs='?',default=-1,help='minimum number
 args = parser.parse_args()
 print "here's what I have as arguments: ", args
 
-
+# Tests for arguments
 if args.splittype[0] not in ["day","speed","maxspeed"]:
         exit("incorrect splittype " + str(args.splittype[0]) + " must be day, speed, or maxspeed")
 if args.speedtspan not in [0,1,4]:
@@ -79,11 +79,13 @@ endyr = args.endyr[0]
 SA = args.SA
 minGB = args.minGB
 
-diradd = getdirectory(splittype)
+
+#---------------------------------#
+# Set some constants
 
 nbounds = len(tbound1)
-
 R = 6371000     # radius of Earth in m
+minevent = 100000
 
 nyears = endyr - startyr + 1
 
@@ -92,11 +94,19 @@ maxts = np.zeros(nyears)
 
 plotdensity = False
 
-minevent = 100000
+#----------------------------------#
+# Set directories
 
+diradd = getdirectory(splittype)
+# input directory
 DirI = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/' + Data + '_output/' + Version + str(startyr) + '/proc/'
+# Output directory
+DirO = DirI + diradd + '/'
 
+# File that has all precip event data 
+FileI1 = 'All_Precip_' + str(startyr) + '-' + str(endyr) + '_' + Data + '_' + Version + '.nc'
 
+#----------------------------------#
 # Set up latitude files for all data types and DirI for any that aren't
 # standard
 
@@ -122,21 +132,18 @@ else:
     print("unexpected data type")
     exit()
 
-DirO = DirI + diradd + '/'
-FileI1 = 'All_Precip_' + str(startyr) + '-' + str(endyr) + '_' + Data + '_' + Version + '.nc'
 
+#-------------------------------#
+# Get latitude and longitude data 
 
-#Get lons and lats
-iday = 0
-print FileInLats
 FileIn = xrayOpen(FileInLats)
 
 if Data in ['CESM','GPCP']:
     lats = FileIn['lat'].values
     lons = FileIn['lon'].values
 elif Data in ["ERA20C","TRMMERAIgd"]:
-        lats = FileIn['latitude'].values
-        lons = FileIn['longitude'].values
+    lats = FileIn['latitude'].values
+    lons = FileIn['longitude'].values
 else:
     lats = FileIn['Latitude'].values
     lons = FileIn['Longitude'].values
@@ -145,26 +152,27 @@ nlats = len(lats)
 nlons = len(lons)
 
 
-print DirI + FileI1
+#--------------------------------#
+# Open up file with precip events
+
 datain = xrayOpen(DirI + FileI1,decodetimes=False)
 
+#--------------------------------#
+# Set up the variables we want to calculate in list varlistin
 
-# Set up the variables we want to calculate
 varlistin = []
-
 newvar = "xmaxspeed_" + str(speedtspan) + "ts"
 varlistin.append((str(newvar)))
 
+# If calculating surface area variables add these to the list
 if SA == 1:
-        varlistin.extend(('gridboxspanSA','totalprecipSA','uniquegridboxspanSA'))
+    varlistin.extend(('gridboxspanSA','totalprecipSA','uniquegridboxspanSA'))
 
+# Add others to the list - these can be removed, or added to if you define what
+# that variable requires below
 varlistin.extend(('gridboxspan','totalprecip','uniquegridboxspan','timespan','tstart','tmean','xcenterstart','xcenterend','ycenterstart','ycenterend','xcentermean','ycentermean','xmin','xmax','ymin','ymax'))
 
 print varlistin
-
-#if speedtspan == 0:    # have updated process script to not use this variable name now
-#       newvar = "xmaxtravel"
-#       newvarout = "xmaxspeed"
 
 f4vars = np.array(varlistin)
 f4varsin = np.array(varlistin)
