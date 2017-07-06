@@ -506,13 +506,16 @@ for ievent in range(minevent,maxrun):
         exit("ValueError")
 
     ncfile['gridboxspan'][ievent-minevent] = (np.sum([data_mask_small.mask]))
+    ncfile['gridboxspanSA'][ievent-minevent] = (np.sum([data_mask_small.mask*SurfA_small[None,:,:]]))
+
     # there used to be a factor of 0.001 here to convert from mm to m.
     # but we want to keep it in mm!
     #        ncfile['totalprecip'][ievent-minevent] = (0.001 * np.nansum([data_mask_small.mask * precipin_small]))
     ncfile['totalprecip'][ievent-minevent] = (np.nansum([data_mask_small.mask * precipin_small]))
+
     # SurfA is in m2
+    ncfile['uniquegridboxspan'][ievent-minevent] = (np.sum(data_mask_max))
     ncfile['uniquegridboxspanSA'][ievent-minevent] = (np.sum([data_mask_max*SurfA_small]))
-    ncfile['gridboxspanSA'][ievent-minevent] = (np.sum([data_mask_small.mask*SurfA_small[None,:,:]]))
     # Factor of 0.001 to convert from mm to m
     # SurfS_small is in m2
     # So OtotalP is in m3

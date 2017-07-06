@@ -74,10 +74,10 @@ endyr = args.endyr[0]
 minGB = args.minGB
 
 if Data in ['TRMM','TRMMERAIgd','ERAI','ERA20C','CESM']:
-    filetimespan == '3hrly':
+    filetimespan = '3hrly'
     daymult = 8     # 8 timesteps per day
 elif Data == 'GPCP':
-    filetimespan == 'daily':
+    filetimespan = 'daily'
     daymult = 1    # 1 timesteps per day
 else:
     exit('unknown Data',Data)
@@ -137,6 +137,14 @@ else:
     exit()
 
 DirO = DirI + diradd + '/'
+
+# Check directory exists and create if not
+
+try:
+    os.stat(DirO)
+except:
+    os.mkdir(DirO)
+
 # open files: 
 # dataIn is list of all precip events
 # eventsIn is maps of each timestep with event id number
@@ -233,7 +241,6 @@ for iday in range(0,nbounds):
             # update events map
             Tmin = evTstarts[ievent]    # to get correct index later
             events = None   # clear memory
-            print 'memory usage', memory_usage_psutil()
             events = (eventsIn['value']
                         [evTstarts[ievent]:min(nextmonth+50,maxtimes),0,:,:].values)
         if imonth >= ntimes:
@@ -324,7 +331,7 @@ for iday in range(0,nbounds):
 
     newDataset = xr.Dataset({'LocalDensity':daout}
                             ,{'LocalFractionalDensity':daout2})
-    FileO = ('LocFracDensity_' + str(startyr) + '-' + str(endyr) + '_' + Version +
+    FileO = ('Density_' + str(startyr) + '-' + str(endyr) + '_' + Version +
                    '_' + str(tbound1[iday]) + '-' + str(tbound2[iday]) + unit + '.nc')
 
     newDataset.to_netcdf(DirO + FileO,mode='w')

@@ -193,9 +193,7 @@ OLRprecip = OLRprecip.rename('mm/yr/yr')
 
 plot = []
 print OLRprecip 
-figtitle = FigDir + 'paper_OLR_Precip_Regressions_1-2day'
-if plotboth:
-    figtitle = figtitle + '_and_2-5day'
+figtitle = FigDir + 'paper_OLR_Precip_Regressions_1-2day_TRMM_ERA'
 
 wkres = Ngl.Resources()
 wkres.wkColorMap = "BlueDarkRed18"
@@ -294,7 +292,7 @@ res2.tiXAxisOn = False
 #res2.tmYLLabelFontHeightF = 0.03
 #res2.tmYLMode = "Automatic"
 #res2.tmYLFormat = "@6^g"
-res2.tiYAxisString      = "# 1-2 day events"
+res2.tiYAxisString      = "TRMM"
 res2.tiYAxisFontColor   = "blue"
 # Turn off right hand axis labels
 res2.tmYROn       = False
@@ -307,8 +305,8 @@ res2.vpXF      = .1
 res2.vpYF      = .65
 
 print TRMM1.year[0].values
-res2.trXMinF     = TRMM1.year[0].values - 1
-res2.trXMaxF     = TRMM1.year[-1].values + 1
+res2.trXMinF     = ERA1.year[0].values - 1
+res2.trXMaxF     = ERA1.year[-1].values + 1
 
 res2.tiMainPosition = 'Left'
 res2.tiMainOffsetXF = -0.03
@@ -316,7 +314,7 @@ res2.tiMainString = 'b.'
 
 plot = (Ngl.xy(wks,TRMM1.year.values,TRMM1.values,res2))
 
-Ngl.add_text(wks,plot,'b',TRMM1.year.values[0],Ngl.get_float(plot,"tmYLMajorLengthF"),txres)
+Ngl.add_text(wks,plot,'b',ERA1.year.values[0],Ngl.get_float(plot,"tmYLMajorLengthF"),txres)
 
 # Add 2-5 day data
 
@@ -354,7 +352,7 @@ res22.tmYRFormat   = "f"      # Gets rid of unnecessary trailing zeros
 #
 # Move the Y axis string to the right.
 #
-res22.tiYAxisString      = "# 2-5 day events"
+res22.tiYAxisString      = "ERA-Interim"
 res22.tiYAxisSide        = "Right"
 res22.tiYAxisFontColor   = "red"
 res22.tiXAxisFontHeightF = Ngl.get_float(plot,"tiXAxisFontHeightF")
@@ -369,12 +367,10 @@ res22.xyMonoMarkLineMode = True
 res22.tmYRLabelFontHeightF = Ngl.get_float(plot,"tmYLLabelFontHeightF")
 res22.tmYRMajorLengthF     = Ngl.get_float(plot,"tmYLMajorLengthF")
 
-plot2 = (Ngl.xy(wks,TRMM2.year.values,TRMM2.values,res22))
-
 Ngl.draw(plot)
 
 if plotboth:    # if want to include 1-2 AND 2-5 day events
-    plot2 = (Ngl.xy(wks,TRMM2.year.values,TRMM2.values,res22))
+    plot2 = (Ngl.xy(wks,ERA1.year.values,ERA1.values,res22))
     Ngl.draw(plot2)
 
 # Repeat for ERA-I data next to first plot
@@ -386,11 +382,11 @@ res22.vpYF      = .65
 
 res2.trXMinF     = ERA1.year[0].values - 1
 res2.trXMaxF     = ERA1.year[-1].values + 1
-res22.trXMinF     = ERA2.year[0].values - 1
-res22.trXMaxF     = ERA2.year[-1].values + 1
+res22.trXMinF     = res2.trXMinF
+res22.trXMaxF     = res2.trXMaxF
 
 res2.tiMainString = 'c.'
-plot = (Ngl.xy(wks,ERA1.year.values,ERA1.values,res2))
+plot = (Ngl.xy(wks,TRMM2.year.values,TRMM2.values,res2))
 
 res22.tmYRLabelFontHeightF = Ngl.get_float(plot,"tmYLLabelFontHeightF")
 res22.tmYRMajorLengthF     = Ngl.get_float(plot,"tmYLMajorLengthF")

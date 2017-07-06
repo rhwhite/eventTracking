@@ -49,6 +49,8 @@ parser.add_argument('--test',type=int,nargs='?',default=0,help='1 for test')
 parser.add_argument('--extra',type=int,nargs='?',default=0,help='1 for test')
 parser.add_argument('--tperday',type=int,nargs='?',default=8,help=
         'timesteps per day, default is 3hourly = 8')
+parser.add_argument('--minGB',type=int,nargs=1,default=0,help='min gridboxes')
+
 
 args = parser.parse_args()
 
@@ -72,11 +74,15 @@ minlat = args.minlat
 maxlat = args.maxlat
 test = args.test
 extra = args.extra
+minGB = args.minGB[0]
 
 diradd = getdirectory(splittype)
 nbounds = len(tbound1)
 
 print(tbound1)
+
+print minGB
+print str(minGB)
 
 R = 6371000     # radius of Earth in m
 
@@ -192,6 +198,8 @@ totalprecip = datain.totalprecip[0:nevents].values
 totalprecipSA = datain.totalprecipSA[0:nevents].values
 gridboxspan = datain.gridboxspan[0:nevents].values
 gridboxspanSA = datain.gridboxspanSA[0:nevents].values
+unigridboxspan = datain.uniquegridboxspan[0:nevents].values
+
 
 # In[6]:
 
@@ -232,43 +240,47 @@ for ievent in range(0,nevents):
     # check is in timeframe of analysis
     # assuming that tstart = 0 is equal to Fstartyr
 
-    if tstart[ievent] >= starttstart and tstart[ievent] <= endtstart: 
+    if unigridboxspan[ievent] > minGB:    # if unique
+                                                  # gridboxes exceed specified threshold
 
-        # check if in region
-        if isinregion(lats[ycenterstart[ievent]],
-                      lons[xcenterstart[ievent]]):
 
-            if isinregion(lats[ycenterend[ievent]],
-                          lons[xcenterend[ievent]]):
+        if tstart[ievent] >= starttstart and tstart[ievent] <= endtstart: 
 
-                for ibound in range(0,nbounds):
-                    if timespan[ievent] < tbound2[ibound]:
-                        if extra == 1:
-                            averageydist[ibound] += (lats[ycenterend[ievent]] -
-                                                    lats[ycenterstart[ievent]])
-                            averagexdist[ibound] += (lons[xcenterend[ievent]] -
-                                                    lons[xcenterstart[ievent]])
-                        # if negative then that's fine for NH, positive is fine
-                        # for southern hemisphere, so get the average event
-                        # distance travelled
+            # check if in region
+            if isinregion(lats[ycenterstart[ievent]],
+                          lons[xcenterstart[ievent]]):
 
-                        averagetime[ibound] += timespan[ievent]
-                        averageprecipperhr[ibound] += (
-                                                        totalprecip[ievent]/timespan[ievent])
-                        # Include factor of 3 to convert to hours, not timesteps
-                        averageprecipperareahr[ibound] += (
-                                                            totalprecip[ievent]/(3.0 *
-                                                            gridboxspan[ievent]))
-                        # Include factor of 3 because timespan is in hours, not timesteps
-                        averagem2[ibound] += ( gridboxspanSA[ievent] * 3.0 /
-                                                      timespan[ievent])
-                        # Include factor of 3 because timespan is in hours, not
-                        # timesteps
-                        averagegridboxes[ibound] += ( gridboxspan[ievent] * 3.0 /
-                                                        timespan[ievent])
-                        precipvolume[ibound] += totalprecipSA[ievent]
-                        count[ibound] += 1
-                        break
+                if isinregion(lats[ycenterend[ievent]],
+                              lons[xcenterend[ievent]]):
+
+                    for ibound in range(0,nbounds):
+                        if timespan[ievent] < tbound2[ibound]:
+                            if extra == 1:
+                                averageydist[ibound] += (lats[ycenterend[ievent]] -
+                                                        lats[ycenterstart[ievent]])
+                                averagexdist[ibound] += (lons[xcenterend[ievent]] -
+                                                        lons[xcenterstart[ievent]])
+                            # if negative then that's fine for NH, positive is fine
+                            # for southern hemisphere, so get the average event
+                            # distance travelled
+
+                            averagetime[ibound] += timespan[ievent]
+                            averageprecipperhr[ibound] += (
+                                                            totalprecip[ievent]/timespan[ievent])
+                            # Include factor of 3 to convert to hours, not timesteps
+                            averageprecipperareahr[ibound] += (
+                                                                totalprecip[ievent]/(3.0 *
+                                                                gridboxspan[ievent]))
+                            # Include factor of 3 because timespan is in hours, not timesteps
+                            averagem2[ibound] += ( gridboxspanSA[ievent] * 3.0 /
+                                                          timespan[ievent])
+                            # Include factor of 3 because timespan is in hours, not
+                            # timesteps
+                            averagegridboxes[ibound] += ( gridboxspan[ievent] * 3.0 /
+                                                            timespan[ievent])
+                            precipvolume[ibound] += totalprecipSA[ievent]
+                            count[ibound] += 1
+                            break
 
 
 # In[ ]:
@@ -290,7 +302,8 @@ averagekm2 = averagem2 / (1000.0 * 1000.0)
 # Write out to a text file
 
 filename = (filenameadd + 'Averages_' + '{:d}'.format(minlat) + 'N-' +
-                    '{:d}'.format(maxlat) + 'N.txt')
+                    '{:d}'.format(maxlat) + 'N_min' + str(minGB) + 'GB.txt')
+
 with open(DirI + filename, 'w') as text_file:
     text_file.write('Domain averages for ' + '{:d}'.format(minlat) + 'N-' +
             '{:d}'.format(maxlat) + 'N and ' + '{:d}'.format(minlon) + 'E-'
