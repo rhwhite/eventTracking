@@ -1,10 +1,16 @@
-# -*- coding: utf-8 -*-
 """
+Code to extract events from the processed data file, separated by either
+timespan, or by travel speed.
+
+Author: Rachel White, rachel.white@cantab.net
+Created: July 2016
+
 Example usage:
 python extract_time_speed_arg.py --Data TRMMERAIgd --Version Standard \
 --startyr 1998 --endyr 2014 --splittype day --unit day \
 --tbound1 0 1 2 5 --tbound2 1 2 5 100
 """
+
 import os, errno
 import numpy as np
 import netCDF4
@@ -118,7 +124,7 @@ elif Data == "TRMMERAIgd":
     FileInLats = '/home/disk/eos4/rachel/Obs/TRMM/regrid2ERAI_TRMM_3B42_1998-2014.nc'
 
 elif Data == "ERAI":
-    FileInLats = '/home/disk/eos4/rachel/Obs/ERAI/Precip_3hrly/SeasAnn_ERAI_Totalprecip_' + str(startyr) + '-' + str(endyr) + '_preprocess.nc' 
+    FileInLats = '/home/disk/eos4/rachel/Obs/ERAI/3hrly/Precip_3hrly/SeasAnn_ERAI_Totalprecip_' + str(startyr) + '-' + str(endyr) + '_preprocess.nc' 
 
 elif Data == "ERA20C":
     FileInLats = '/home/disk/eos4/rachel/Obs/ERA_20C/ERA_20C_LatLon.nc'
