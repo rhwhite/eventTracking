@@ -1,7 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-This script options up data files with python debugging set up so that the data
+This script opens up precipitation event data files with python debugging set up so that the data
 files can be explored in real time
+
+Author: Rachel White, rachel.white@cantab.net
+
 """
 import os, errno
 import numpy as np
@@ -81,7 +83,7 @@ elif Data == "TRMMERAIgd":
     FileInLats = '/home/disk/eos4/rachel/Obs/TRMM/regrid2ERAI_TRMM_3B42_1998-2014.nc'
 
 elif Data == "ERAI":
-    FileInLats = '/home/disk/eos4/rachel/Obs/ERAI/Precip_3hrly/SeasAnn_ERAI_Totalprecip_' + str(startyr) + '-' + str(endyr) + '_preprocess.nc' 
+    FileInLats = '/home/disk/eos4/rachel/Obs/ERAI/3hrly/Precip_3hrly/SeasAnn_ERAI_Totalprecip_' + str(startyr) + '-' + str(endyr) + '_preprocess.nc' 
 
 elif Data == "ERA20C":
     FileInLats = '/home/disk/eos4/rachel/Obs/ERA_20C/ERA_20C_LatLon.nc'
