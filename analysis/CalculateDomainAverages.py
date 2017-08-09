@@ -1,12 +1,16 @@
-# coding: utf-8
 """
+Code to sum characteristics of events split by either time or speed and write
+out the results to a table.
+
+Author: Rachel H White rhwhite@uw.edu
+Created: Oct 2016
+
 Example use:
-python CalculateDomainTotalAverages.py --Data TRMM --Version Standard \
+python CalculateDomainAverages.py --Data TRMM --Version Standard \
 --anstartyr 1998 --anendyr 2014 \
 --tbound1 0 1 2 5 --tbound2 1 2 5 100 --splittype day \
 --unit day --minlat -40 --maxlat 40
 """
-# In[1]:
 
 import os, errno
 import numpy as np

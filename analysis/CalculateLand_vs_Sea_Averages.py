@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 Code to sum characteristics of events split by either time or speed and write
 out the results to a table.
 
-Author: Rachel H White rhwhite@uw.edu
+Author: Rachel H White rachel.white@cantab.net
 Created: Oct 2016
 
 Example use:
@@ -12,7 +11,6 @@ python CalculateLand_vs_SeaAverages.py --Data TRMM --Version Standard \
 --tbound1 0 1 2 5 --tbound2 1 2 5 100 --splittype day \
 --unit day --minlat -40 --maxlat 40
 """
-# In[1]:
 
 import os, errno
 import numpy as np
