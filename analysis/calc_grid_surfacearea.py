@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Script to calculate the surface area of gridded data.
 The output from this script is used when summing up total precipitation and
 total area of precipitation
 
 Created: Oct 2016
-Author: Rachel H White rhwhite@uw.edu
+Author: Rachel H White rachel.white@cantab.net
 """
 
 import os, errno
