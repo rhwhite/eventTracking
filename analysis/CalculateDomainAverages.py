@@ -103,7 +103,7 @@ elif Data == "TRMMERAIgd":
     Fendyr = 2014
 
 elif Data == "ERAI":
-    FileInLats = ('/home/disk/eos4/rachel/Obs/ERAI/Precip_3hrly/'
+    FileInLats = ('/home/disk/eos4/rachel/Obs/ERAI/3hrly/Precip_3hrly/'
                 'SeasAnn_ERAI_Totalprecip_1980-2014_preprocess.nc')
     Fstartyr = 1980
     Fendyr = 2014
@@ -243,8 +243,7 @@ for ievent in range(0,nevents):
     if unigridboxspan[ievent] > minGB:    # if unique
                                                   # gridboxes exceed specified threshold
 
-
-        if tstart[ievent] >= starttstart and tstart[ievent] <= endtstart: 
+        if tstart[ievent] >= starttstart and tstart[ievent] <= endtstart:
 
             # check if in region
             if isinregion(lats[ycenterstart[ievent]],

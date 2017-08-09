@@ -7,7 +7,7 @@ Author: Rachel H White rhwhite@uw.edu
 Created: Oct 2016
 
 Example use:
-python CalculateDomainAverages.py --Data TRMM --Version Standard \
+python CalculateLand_vs_SeaAverages.py --Data TRMM --Version Standard \
 --anstartyr 1998 --anendyr 2014 \
 --tbound1 0 1 2 5 --tbound2 1 2 5 100 --splittype day \
 --unit day --minlat -40 --maxlat 40
@@ -30,7 +30,7 @@ from rhwhitepackages.readwrite import getunitsdesc
 from rhwhitepackages.readwrite import xrayOpen
 from rhwhitepackages.readwrite import getdirectory
 
-parser = argparse.ArgumentParser(description="Calculate domain averages")
+parser = argparse.ArgumentParser(description="Calculate land/sea averages")
 parser.add_argument('--minlat',type=int,nargs='?',default=-45,help='min lat')
 parser.add_argument('--maxlat',type=int,nargs='?',default=45,help='max lat')
 parser.add_argument('--minlon',type=int,nargs='?',default=0,help='min lon')
@@ -101,7 +101,7 @@ elif Data == "TRMMERAIgd":
                     'regrid2ERAI_TRMM_3B42_1998-2014.nc')
 
 elif Data == "ERAI":
-    FileInLats = ('/home/disk/eos4/rachel/Obs/ERAI/Precip_3hrly/'
+    FileInLats = ('/home/disk/eos4/rachel/Obs/ERAI/3hrly/Precip_3hrly/'
                 'SeasAnn_ERAI_Totalprecip_' +
                 str(startyr) + '-' + str(endyr) + '_preprocess.nc')
 
