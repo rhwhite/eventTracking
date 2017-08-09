@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Script to calculate the surface area of gridded data.
+The output from this script is used when summing up total precipitation and
+total area of precipitation
 
 Created: Oct 2016
 Author: Rachel H White rhwhite@uw.edu
@@ -29,9 +31,8 @@ args = parser.parse_args()
 
 print args.Data
 
-
-pi = 3.14159
-rE = 6.371E6
+pi = 3.14159    # pi
+rE = 6.371E6    # radius of earth in m
 
 Data = args.Data[0]
 startyr = args.startyr[0]
@@ -60,7 +61,7 @@ elif Data == "GPCP":
     DirP = '/home/disk/eos4/rachel/Obs/GPCP/Daily/'
     FileP = 'GPCP_1DD_v1.2_199610-201510.nc'
 
- 
+
 print DirP + FileP
 
 #Get lons and lats
@@ -82,6 +83,7 @@ nlons = len(lons)
 
 area = np.zeros([nlats,nlons],np.float)
 lonvalue = np.zeros(nlons,np.float)
+
 # Almost all grids will have equal longitude spacing, but just in case:
 for ilon in range(0,nlons-1):
     lonvalue[ilon] = abs(lonsr[ilon+1] - lonsr[ilon])
