@@ -3,7 +3,7 @@ Code to extract events from the processed data file, separated by either
 timespan, or by travel speed.
 
 Author: Rachel White, rachel.white@cantab.net
-Created: July 2016
+Created: Jan 2016
 
 Example usage:
 python extract_time_speed_arg.py --Data TRMMERAIgd --Version Standard \

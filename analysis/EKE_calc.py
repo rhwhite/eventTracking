@@ -1,9 +1,9 @@
-# coding: utf-8
+#------------------
 # Script to calculate EKE from ERA-interim files (currently 6-hourly)
 # Taken from ipython notebook
 #
-# Written by Rachel White (rhwhite@uw.edu) on 15-12-2016
-
+# Written by Rachel White (rachel.white@cantab.net) on 15-Dec-2016
+#-------------------
 import os, errno
 import netCDF4
 import numpy as np

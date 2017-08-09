@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Code to create maps containing average characteristics of events for each
-gridbox on a monthly resolution.
+gridbox on a monthly resolution, used after extract_time_speed.py
 
-Author: Rachel H White rhwhite@uw.edu
+Author: Rachel H White rachel.white@cantab.net
 Created: Jan 2016
 
 """
@@ -88,6 +87,9 @@ nbounds = len(tbound1)
 mapping = args.mapping
 filetimespan = "3hrly"
 test =0
+
+print(mapping)
+
 
 if splittype == "maxspeed":
     diradd = "MaxSpeeds"
@@ -237,7 +239,7 @@ elif Data == "TRMMERAIgd":
     FileP = 'regrid2ERAI_TRMM_3B42_1998-2014.nc'
 
 elif Data == "ERAI":
-    DirP = '/home/disk/eos4/rachel/Obs/ERAI/Precip_' + filetimespan + '/'
+    DirP = '/home/disk/eos4/rachel/Obs/ERAI/' + filetimespan + '/Precip_' + filetimespan + '/'
     FileP = 'ERAI_Totalprecip_1980-2015_preprocess.nc'
 
 elif Data == "ERA20C":
@@ -339,7 +341,7 @@ lons2 = []
 
 
 for ibound in range(0,nbounds):
-    FileI1 = getPrecipfilename(mapping, Data, Version, startyr, endyr, ibound, splittype, unit, speedtspan, minGB, tbound1, tbound2)    
+    FileI1 = getPrecipfilename(mapping, Data, Version, startyr, endyr, ibound, splittype, unit, speedtspan, minGB, tbound1, tbound2)
 
     FileO = getdenfilename(mapping, Data, Version, startyr, endyr, ibound, splittype, unit, speedtspan, minGB, tbound1, tbound2, 'Mon',-1,-1)
 
@@ -362,6 +364,9 @@ for ibound in range(0,nbounds):
             setattr(writeFiles[ibound][ivar], 'Extra Info', 'Moving from the east, i.e. easterly; excluding stationary')
         elif ivar[0] == 'W':
             setattr(writeFiles[ibound][ivar], 'Extra Info', 'Moving from the west, i.e. westerly; excluding stationary')
+        elif ivar == "TDensity":
+            setattr(writeFiles[ibound][ivar], 'Extra Info', '')
+
 
     dtime = 0
     for ivar in extravars:
