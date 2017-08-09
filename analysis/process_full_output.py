@@ -1,9 +1,16 @@
-# -*- coding: utf-8 -*-
 """
-Spyder Editor
+Code to process raw output from the Forward-in-Time event tracking code.
+Currently set up for TRMM, ERA-interim, CESM, ERA20C and GPCP data
 
-This is a temporary script file.
+Author: Rachel White, rachel.white@cantab.net
+
+Created: Jan 2016
+
+Example use: python process_full_output.py --Data TRMM --Version
+Standard --startyr 1998 --endyr 2014
+
 """
+
 import os, errno
 import numpy as np
 import numpy.ma as ma
