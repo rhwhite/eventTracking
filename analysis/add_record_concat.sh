@@ -1,4 +1,8 @@
 #!/bin/sh
+# This script adds a record dimension to the raw output from tht FiT event
+# tracking code and then concatenates all files together in time
+# Concatenation is done in groups to get over a number of files limit
+
 while getopts ":d:v:s:e:" opt; do
         case $opt in
                 d) dataV="$OPTARG"
