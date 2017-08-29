@@ -20,7 +20,7 @@ done
 
 cd /home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/${dataV}_output/${versionV}${startyrV}/raw/
 
-filestart=${dataV}${startyrV}-${endyrV}_${versionV}
+filestart=${dataV}_${versionV}_${startyrV}-${endyrV}
 fileend='_4Dobjects.nc'
 nyears=$((endyrV-startyrV + 1))
 nstart=0
