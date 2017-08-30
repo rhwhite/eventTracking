@@ -152,8 +152,8 @@ if Data == 'TRMM' and Version in ["Standard","6th_from6"]:
 else:
     Dir = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/' + Data + '_output/' + Version + str(startyr) + '/raw/'
 
-File1 = 'ts_' + Data +  str(startyr) + '-' + str(endyr) + '_' + Version + '_4Dobjects.nc'
-TxtFileIn = Data + str(startyr) + '-' + str(endyr) + '_' + Version + '_4Dobject_tree.txt'
+File1 = 'ts_' + Data + '_' + Version + '_' + str(startyr) + '-' + str(endyr) + '_4Dobjects.nc'
+TxtFileIn = Data + '_' + Version + '_' + str(startyr) + '-' + str(endyr) + '_4Dobject_tree.txt'
 
 DirO = '/home/disk/eos4/rachel/EventTracking/FiT_RW_ERA/' + Data + '_output/' + Version + str(startyr) + '/proc/'
 FileO = 'All_Precip_' + str(startyr) + '-' + str(endyr) + '_' + Data + '_' + Version + '.nc'
@@ -270,12 +270,15 @@ while eventnum < nevents:
             # Get int data out of strings:
             preeventnum = -100
             print "eventnum first in chunk", eventnums[0]
+
+            # Start loop through every line in this chunk
             for iline in range(0,nlines):
                 eventnum = eventnums[iline]
                 xs[iline,:] = (re.findall(r'\d+',textdata2[iline,0]))
                 ys[iline,:] = (re.findall(r'\d+',textdata2[iline,1]))
                 cxy[iline,:] = (re.findall(r'\d+',textdata2[iline,2]))
 
+                # if line is a continuation of a previous event
                 if eventnum == preeventnum:
                     minx[index] = min(minx[index],xs[iline,0])
                     maxx[index] = max(maxx[index],xs[iline,1])
@@ -291,7 +294,7 @@ while eventnum < nevents:
                         #print "in the middle of event ", eventnum
 
                         if nlines < maxlines:   # then we reached the end of the file 
-                            print "ending of file", nlines, maxlines
+                            print "end of file: ", nlines, maxlines
                             skips += nlines
                             print "skips now ",skips
                             eventnum += 1   # to get out of outer loop!
@@ -304,11 +307,12 @@ while eventnum < nevents:
                             print "skips before", skips
                             skips += nlines-eventcount      # Skip back to beginning of this event
                             print 'skips here', skips
-                else:
+                        # End if for continued event as last in chunk
+
+                else:       # if this line is a new event
                     if (preeventnum >= 0): #then it's not the very first event
                         geteventdata(index)
 
-                    #refresh list
                     #update index for new event
                     index = eventnum
 
@@ -331,18 +335,22 @@ while eventnum < nevents:
 
                         eventcount=1
 
-                if iline == nlines-1:   # i.e. we're at the end of our chunk
-                    print "last event was single"
-                    print "eventnum last in chunk ", eventnum
-                    geteventdata(index)
- 
-                    if nlines < maxlines:   # then we reached the end of the file 
-                        print "add to skips so we read end of file", skips, nlines
-                        skips += nlines
-                        print "skips now", skips
-                    else:
-                        skips += nlines-1 # go back to start of this event.
+                    # If last event was single, now we've read in the line
+                    # about it, get data, and then add skips to the filecount
+                    # for the next chunk of the file
+                    if iline == nlines-1:   # i.e. we're at the end of our chunk
+                        print "last event was single"
+                        print "eventnum last in chunk ", eventnum
+                        geteventdata(index)
 
+                        if nlines < maxlines:   # then we reached the end of the file 
+                            print "add to skips so we read end of file", skips, nlines
+                            skips += nlines
+                            print "skips now", skips
+                        else:
+                            skips += nlines-1 # go back to start of this event.
+                # End if for checking if event is a single line or not
+            # End loop over every line in chunk
         except MemoryError:
             print "Memory error, trying to chunk"
             maxlines = int(maxlines/2)
@@ -358,9 +366,9 @@ while eventnum < nevents:
 timeend = time.time()
 print "time to read and process = " + str(timeend - timestart) + " seconds"
 
-print(np.genfromtxt(Dir + TxtFileIn,dtype='int',skip_header = 1, max_rows = 6,usecols = (0,2)))
+#print(np.genfromtxt(Dir + TxtFileIn,dtype='int',skip_header = 1, max_rows = 6,usecols = (0,2)))
                         #textdata = np.loadtxt(Dir + TxtFileIn,skiprows = 1, usecols = (0,2,3,4,6))
-print(np.genfromtxt(Dir + TxtFileIn,dtype='string',skip_header = 1, max_rows = 6,usecols = (3,4,6)))
+#print(np.genfromtxt(Dir + TxtFileIn,dtype='string',skip_header = 1, max_rows = 6,usecols = (3,4,6)))
 
 
 timeend = time.time()
@@ -408,6 +416,8 @@ except OSError:
 print "nevents here:", nevents
 ncfile = Dataset(DirO + FileO, 'w')
 ncfile.createDimension('events', nevents)
+ncfile.createDimension('lats', nlats)
+ncfile.createDimension('lons', nlons)
 
 today = dt.date.today()
 ncfile.history=('Created using process_full_output.py on ' +
@@ -418,7 +428,7 @@ varlistin = []
 newvar = 'xmaxspeed_' + str(speedtspan) + 'ts'
 varlistin.append((str(newvar)))
 
-varlistin.extend(('gridboxspanSA','totalprecipSA','uniquegridboxspanSA'))
+varlistin.extend(('gridboxspanSA','totalprecipSA','uniquegridboxspanSA','avg_intensity'))
 
 varlistin.extend(('gridboxspan','totalprecip','uniquegridboxspan','timespan','tstart','tmean','xcenterstart','xcenterend','ycenterstart','ycenterend','xcentermean','ycentermean','xmin','xmax','ymin','ymax'))
 
@@ -426,6 +436,21 @@ f4vars = np.array(varlistin)
 nf4vars = len(f4vars)
 
 Ofilevars = []
+
+# Add lats and lons
+
+Ofilevars.append(ncfile.createVariable('lats','f4',('lats'),fill_value=-9999))
+setattr(Ofilevars[-1],'units','degrees latitude')
+setattr(Ofilevars[-1],'description',
+                'latitude of indexes used in start, centre and end points')
+
+Ofilevars.append(ncfile.createVariable('lons','f4',('lons'),fill_value=-9999))
+setattr(Ofilevars[-1],'units','degrees longitude')
+setattr(Ofilevars[-1],'description',
+                'longitude of indexes used in start, centre and end points')
+
+
+# Add all other variables
 for ivar in range(0,nf4vars):
     Ofilevars.append(ncfile.createVariable(f4vars[ivar],'f4',('events'),fill_value=-9999))
 
@@ -433,18 +458,35 @@ for ivar in range(0,nf4vars):
     setattr(Ofilevars[-1],'units',units)
     setattr(Ofilevars[-1],'description',desc)
 
-#with open(DirO + FileO, "a") as text_file:
-#   text_file.write("Event number   Num gridcells   Total precip \n")
-
-print "starting now"
-
 tminchunk = 0
 tmaxchunk = 0
 
 maxrun = minevent + nevents
 
 
+ncfile['timespan'][:] = (maxt[:]-mint[:]+ 1) * tmult
+
+ncfile['tstart'][:] = mint[:]
+ncfile['xmin'][:] = minx[:]
+ncfile['xmax'][:] = maxx[:]
+ncfile['ymin'][:] = miny[:]
+ncfile['ymax'][:] = maxy[:]
+
+ncfile['xcenterstart'][:] = startx[:]
+ncfile['xcenterend'][:] = endx[:]
+ncfile['ycenterstart'][:] = starty[:]
+ncfile['ycenterend'][:] = endy[:]
+
+ncfile['tmean'][:] = meant[:]
+ncfile['xcentermean'][:] = centerx[:]
+ncfile['ycentermean'][:] = centery[:]
+ncfile[newvar][:] = maxzonalspeed[:]
+
+ncfile['lats'][:] = lats[:]
+ncfile['lons'][:] = lons[:]
+
 #for ievent in range(minevent, minevent + 3): ### For testing!!!
+
 for ievent in range(minevent,maxrun):
     index = ievent-minevent
     tmin = int(max(0,mint[index]-1))
@@ -528,24 +570,8 @@ for ievent in range(minevent,maxrun):
     # So OtotalP is in m3
     ncfile['totalprecipSA'][ievent-minevent] = (0.001 * np.nansum([data_mask_small.mask * precipin_small * SurfA_small[None,:,:]]))
 
-ncfile['timespan'][:] = (maxt[:]-mint[:]+ 1) * tmult
-
-ncfile['tstart'][:] = mint[:]
-ncfile['xmin'][:] = minx[:]
-ncfile['xmax'][:] = maxx[:]
-ncfile['ymin'][:] = miny[:]
-ncfile['ymax'][:] = maxy[:]
-
-ncfile['xcenterstart'][:] = startx[:]
-ncfile['xcenterend'][:] = endx[:]
-ncfile['ycenterstart'][:] = starty[:]
-ncfile['ycenterend'][:] = endy[:]
-
-ncfile['tmean'][:] = meant[:]
-ncfile['xcentermean'][:] = centerx[:]
-ncfile['ycentermean'][:] = centery[:]
-ncfile[newvar][:] = maxzonalspeed[:]
-
+    ncfile['avg_intensity'][ievent-minevent] = (np.nansum([data_mask_small.mask * precipin_small]) / 
+                                                  ( 3.0 * np.sum([data_mask_small.mask])))
 
 ncfile.close()
 
